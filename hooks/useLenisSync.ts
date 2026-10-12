@@ -16,8 +16,20 @@ export function useLenisSync() {
   useEffect(() => {
     if (!lenis) return;
 
+    // Re-entrancy guard: dispatching a native "scroll" event synchronously
+    // re-enters Lenis's own onNativeScroll handler, which re-emits "scroll" —
+    // without this flag that feedback loop recurses until the call stack
+    // overflows ("Maximum call stack size exceeded") during fast scrolling.
+    // Framer still receives exactly one synthetic scroll event per Lenis frame.
+    let dispatching = false;
     function onScroll() {
-      window.dispatchEvent(new Event("scroll", { bubbles: false }));
+      if (dispatching) return;
+      dispatching = true;
+      try {
+        window.dispatchEvent(new Event("scroll", { bubbles: false }));
+      } finally {
+        dispatching = false;
+      }
     }
 
     lenis.on("scroll", onScroll);

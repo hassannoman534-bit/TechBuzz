@@ -1,29 +1,196 @@
-@import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap");
 @import "tailwindcss";
 
+/* ═════════════════════════════════════════════════════════════════════════════
+   1. TOKENS  (next-gen design system — Void / Nebula / Ion / Aurora)
+═════════════════════════════════════════════════════════════════════════════ */
+@theme {
+  /* Foundation */
+  --color-void: #030712;
+  --color-void-raised: #070b16;
+  --color-void-elevated: #0c1222;
+  --color-ink: #e7eaf3;
+  --color-ink-muted: #8a93a6;
+  --color-ink-faint: #4b5466;
+  --color-line: rgb(255 255 255 / 0.08);
+  --color-line-strong: rgb(255 255 255 / 0.14);
+
+  /* Accents: core / deep / soft */
+  --color-nebula: #7b61ff;
+  --color-nebula-deep: #2b1a7a;
+  --color-nebula-soft: #b4a6ff;
+  --color-ion: #22d8ff;
+  --color-ion-deep: #053a4d;
+  --color-ion-soft: #9befff;
+  --color-aurora: #2cf5b0;
+  --color-aurora-deep: #06402f;
+
+  /* Legacy aliases — keep existing components working; migrate later */
+  --color-bg-base: var(--color-void);
+  --color-bg-surface: var(--color-void-raised);
+  --color-bg-surface-2: var(--color-void-elevated);
+  --color-neon-cyan: var(--color-ion);
+  --color-neon-violet: var(--color-nebula);
+  --color-neon-emerald: var(--color-aurora);
+  --color-fg-primary: var(--color-ink);
+  --color-fg-muted: var(--color-ink-muted);
+  --color-fg-subtle: var(--color-ink-faint);
+
+  /* Motion */
+  --ease-atmo: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   2. ATMOSPHERE ENGINE
+═════════════════════════════════════════════════════════════════════════════ */
+@property --atmo-a  { syntax: "<color>";      inherits: true; initial-value: transparent; }
+@property --atmo-b  { syntax: "<color>";      inherits: true; initial-value: transparent; }
+@property --atmo-ax { syntax: "<percentage>"; inherits: true; initial-value: 20%; }
+@property --atmo-ay { syntax: "<percentage>"; inherits: true; initial-value: -10%; }
+@property --atmo-bx { syntax: "<percentage>"; inherits: true; initial-value: 85%; }
+@property --atmo-by { syntax: "<percentage>"; inherits: true; initial-value: 55%; }
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    /* Floating navbar clearance (top offset 16px + pill height ≈ 52px, rounded up with margin)
+       so the Signature Reveal lockup never sits under the nav. */
+    --nav-offset: 6.5rem;
+    /* default = hero scene */
+    --atmo-a: rgb(123 97 255 / 0.22);
+    --atmo-b: rgb(34 216 255 / 0.10);
+    --atmo-ax: 20%; --atmo-ay: -10%;
+    --atmo-bx: 85%; --atmo-by: 55%;
+    transition:
+      --atmo-a 1.6s var(--ease-atmo),
+      --atmo-b 1.6s var(--ease-atmo),
+      --atmo-ax 2.2s var(--ease-atmo),
+      --atmo-ay 2.2s var(--ease-atmo),
+      --atmo-bx 2.2s var(--ease-atmo),
+      --atmo-by 2.2s var(--ease-atmo);
+  }
+
+  :root[data-atmo="intro"]    { --atmo-a: rgb(123 97 255 / 0.08); --atmo-b: rgb(34 216 255 / 0.04); --atmo-ax: 10%; --atmo-ay: 20%; --atmo-bx: 90%; --atmo-by: 80%; }
+  :root[data-atmo="services"] { --atmo-a: rgb(34 216 255 / 0.14); --atmo-b: rgb(123 97 255 / 0.08); --atmo-ax: 82%; --atmo-ay: 15%; --atmo-bx: 12%; --atmo-by: 85%; }
+  :root[data-atmo="work"]     { --atmo-a: rgb(123 97 255 / 0.05); --atmo-b: rgb(34 216 255 / 0.03); --atmo-ax: 50%; --atmo-ay: 0%;  --atmo-bx: 50%; --atmo-by: 100%; }
+  :root[data-atmo="pricing"]  { --atmo-a: rgb(123 97 255 / 0.16); --atmo-b: rgb(34 216 255 / 0.06); --atmo-ax: 50%; --atmo-ay: 40%; --atmo-bx: 50%; --atmo-by: 100%; }
+  :root[data-atmo="quiet"]    { --atmo-a: rgb(123 97 255 / 0.04); --atmo-b: rgb(34 216 255 / 0.02); --atmo-ax: 20%; --atmo-ay: 30%; --atmo-bx: 80%; --atmo-by: 70%; }
+  :root[data-atmo="cta"]      { --atmo-a: rgb(123 97 255 / 0.26); --atmo-b: rgb(34 216 255 / 0.18); --atmo-ax: 30%; --atmo-ay: 75%; --atmo-bx: 75%; --atmo-by: 65%; }
+
+  html { background-color: var(--color-void); color: var(--color-ink); }
+  ::selection { background: color-mix(in oklch, var(--color-nebula) 45%, transparent); color: #fff; }
+  :focus-visible { outline: 1px solid var(--color-ion); outline-offset: 3px; }
+}
+
+/* Fixed light field + film grain. Render exactly once, in layout. */
+@utility atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  background:
+    radial-gradient(70vmax 55vmax at var(--atmo-ax) var(--atmo-ay), var(--atmo-a), transparent 70%),
+    radial-gradient(60vmax 50vmax at var(--atmo-bx) var(--atmo-by), var(--atmo-b), transparent 70%),
+    var(--color-void);
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   3. SECTION BLEED UTILITIES
+═════════════════════════════════════════════════════════════════════════════ */
+
+/* Local glow that overflows its section. Usage: <div aria-hidden className="aura aura-nebula" /> inside a `relative isolate` section. */
+@utility aura {
+  position: absolute;
+  inset: -25vh -10vw;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(closest-side, var(--aura-color, color-mix(in oklch, var(--color-nebula) 20%, transparent)), transparent);
+}
+@utility aura-* {
+  --aura-color: color-mix(in oklch, --value(--color-*) 20%, transparent);
+}
+
+/* Feathered edges for sections that contain their own media. Tune with [--feather:25%]. */
+@utility feather-y {
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--feather, 18%), #000 calc(100% - var(--feather, 18%)), transparent);
+}
+@utility feather-t {
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--feather, 18%));
+}
+@utility feather-b {
+  mask-image: linear-gradient(to top, transparent, #000 var(--feather, 18%));
+}
+
+/* Single-use horizon line (e.g. above footer). Not a section divider. */
+@utility horizon {
+  height: 1px;
+  background: linear-gradient(90deg in oklch, transparent, rgb(255 255 255 / 0.10) 30%, color-mix(in oklch, var(--color-ion) 55%, transparent) 50%, rgb(255 255 255 / 0.10) 70%, transparent);
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   4. SURFACE & TYPE UTILITIES
+═════════════════════════════════════════════════════════════════════════════ */
+
+/* Linear-style 1px gradient stroke. Element needs a border-radius; composes with glass cards. */
+@utility border-glow {
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(140deg in oklch,
+      rgb(255 255 255 / 0.16),
+      rgb(255 255 255 / 0.04) 40%,
+      rgb(255 255 255 / 0.02) 65%,
+      color-mix(in oklch, var(--color-ion) 45%, transparent));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.7;
+    transition: opacity 0.5s var(--ease-expo);
+  }
+  &:hover::before { opacity: 1; }
+}
+
+/* Headline highlight — max 1–3 words per headline. */
+@utility text-spectrum {
+  background-image: linear-gradient(100deg in oklch, var(--color-ion-soft), var(--color-nebula-soft));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Standard glass surface */
+@utility glass {
+  background: rgb(255 255 255 / 0.025);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
-   TAILWIND V4 THEME
-   In v4, tailwind.config.ts is replaced entirely by this @theme block.
-   All color tokens, fonts, shadows, radii, and animations live here.
+   AUXILIARY THEME TOKENS  (retained from the prior system — fonts, radii,
+   shadows, animations, and accent tints not covered by the token block above)
 ───────────────────────────────────────────────────────────────────────────── */
 
 @theme inline {
-  /* ── Color Tokens ── */
-  --color-bg-base:       #030712;
-  --color-bg-surface:    #0d1117;
-  --color-bg-surface-2:  #161b22;
+  /* ── Residual color tokens ── */
   --color-bg-glass:      rgba(255, 255, 255, 0.04);
 
   --color-border:        rgba(255, 255, 255, 0.08);
   --color-border-glow:   rgba(56, 189, 248, 0.4);
 
-  --color-fg-primary:    #e2e8f0;
-  --color-fg-muted:      #8b949e;
-  --color-fg-subtle:     #484f58;
-
-  --color-neon-cyan:     #38bdf8;
-  --color-neon-violet:   #a78bfa;
-  --color-neon-emerald:  #34d399;
   --color-neon-rose:     #f472b6;
   --color-neon-amber:    #fbbf24;
 
@@ -34,9 +201,15 @@
   --color-glow-rose:     rgba(244, 114, 182, 0.10);
 
   /* ── Typography ── */
-  --font-display: "Syne", system-ui, sans-serif;
-  --font-body:    "Inter", system-ui, sans-serif;
+  --font-display: var(--font-syne), system-ui, sans-serif;
+  --font-body:    var(--font-inter), system-ui, sans-serif;
   --font-mono:    "Fira Code", "Fira Mono", ui-monospace, monospace;
+
+  /* Signature Reveal section fonts (pretendard + newsreader).
+     Named -signature so they don't override the project's --font-display (Syne). */
+  --font-signature:       var(--font-pretendard), ui-sans-serif, system-ui, sans-serif;
+  --font-signature-serif: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-signature-hand:  var(--font-caveat), "Segoe Print", cursive;
 
   /* ── Border Radius ── */
   --radius-xs:   4px;
@@ -104,10 +277,6 @@
    BASE RESET & ROOT
 ───────────────────────────────────────────────────────────────────────────── */
 
-:root {
-  color-scheme: dark;
-}
-
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -120,7 +289,7 @@ html {
 body {
   background-color: #030712;
   color: #e2e8f0;
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.7;
   min-height: 100%;
@@ -129,24 +298,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-::selection {
-  background: rgba(56, 189, 248, 0.25);
-  color: #e2e8f0;
-}
-
 ::-webkit-scrollbar        { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track  { background: #030712; }
 ::-webkit-scrollbar-thumb  { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248, 0.35); }
 
-:focus-visible {
-  outline: 2px solid #38bdf8;
-  outline-offset: 3px;
-  border-radius: 4px;
-}
-
 h1, h2, h3, h4, h5, h6 {
-  font-family: "Syne", system-ui, sans-serif;
+  font-family: var(--font-syne), system-ui, sans-serif;
   font-weight: 700;
   line-height: 1.15;
   text-wrap: balance;
@@ -213,14 +371,6 @@ img, video {
 /* ─────────────────────────────────────────────────────────────────────────────
    GLASS UTILITIES  (@utility registers these as Tailwind classes)
 ───────────────────────────────────────────────────────────────────────────── */
-
-@utility glass {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(12px) saturate(180%);
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-}
 
 @utility glass-sm {
   background: rgba(255, 255, 255, 0.04);
@@ -295,11 +445,11 @@ img, video {
 ───────────────────────────────────────────────────────────────────────────── */
 
 @utility font-display {
-  font-family: "Syne", system-ui, sans-serif;
+  font-family: var(--font-syne), system-ui, sans-serif;
 }
 
 @utility eyebrow {
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -425,6 +575,7 @@ img, video {
 ───────────────────────────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
+  :root { transition: none; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

@@ -87,8 +87,8 @@ export default function Navbar() {
             brightness={brightness}
             overlayColor={
               scrolled
-                ? "rgba(10,10,20,0.45)"
-                : "rgba(10,10,20,0.30)"
+                ? "rgba(8,10,20,0.82)"
+                : "rgba(8,10,20,0.60)"
             }
             style={{
               border:    "1px solid rgba(255,255,255,0.13)",
@@ -199,39 +199,41 @@ export default function Navbar() {
               {/* Right — CTA + hamburger */}
               <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", flexShrink: 0 }}>
                 {/* CTA — liquid glass button */}
-                <motion.div whileTap={{ scale: 0.94 }} whileHover={{ scale: 1.03 }}>
-                  <Link
-                    href="/contact"
-                    style={{
-                      display:        "inline-flex",
-                      alignItems:     "center",
-                      padding:        "0.38rem 1rem",
-                      borderRadius:   "12px",
-                      fontSize:       "0.8125rem",
-                      fontWeight:     600,
-                      color:          "#ffffff",
-                      textDecoration: "none",
-                      background:     "rgba(255,255,255,0.13)",
-                      border:         "1px solid rgba(255,255,255,0.22)",
-                      boxShadow:      "inset 0 0.5px 0 rgba(255,255,255,0.25)",
-                      transition:     "background 0.2s ease, border-color 0.2s ease",
-                      whiteSpace:     "nowrap",
-                      letterSpacing:  "0.01em",
-                    }}
-                    onMouseEnter={(e) => {
-                      const el = e.currentTarget as HTMLElement;
-                      el.style.background  = "rgba(255,255,255,0.22)";
-                      el.style.borderColor = "rgba(255,255,255,0.40)";
-                    }}
-                    onMouseLeave={(e) => {
-                      const el = e.currentTarget as HTMLElement;
-                      el.style.background  = "rgba(255,255,255,0.13)";
-                      el.style.borderColor = "rgba(255,255,255,0.22)";
-                    }}
-                  >
-                    Book a Call
-                  </Link>
-                </motion.div>
+                <Link
+                  href="/contact"
+                  style={{
+                    display:        "inline-flex",
+                    alignItems:     "center",
+                    padding:        "0.38rem 1rem",
+                    borderRadius:   "12px",
+                    fontSize:       "0.8125rem",
+                    fontWeight:     600,
+                    color:          "#ffffff",
+                    textDecoration: "none",
+                    background:     "rgba(255,255,255,0.13)",
+                    border:         "1px solid rgba(255,255,255,0.22)",
+                    boxShadow:      "inset 0 0.5px 0 rgba(255,255,255,0.25)",
+                    transition:     "background 0.2s ease, border-color 0.2s ease, transform 0.18s ease",
+                    whiteSpace:     "nowrap",
+                    letterSpacing:  "0.01em",
+                  }}
+                  onMouseEnter={(e) => {
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.background  = "rgba(255,255,255,0.22)";
+                    el.style.borderColor = "rgba(255,255,255,0.40)";
+                    el.style.transform   = "scale(1.03)";
+                  }}
+                  onMouseLeave={(e) => {
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.background  = "rgba(255,255,255,0.13)";
+                    el.style.borderColor = "rgba(255,255,255,0.22)";
+                    el.style.transform   = "scale(1)";
+                  }}
+                  onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(0.94)"; }}
+                  onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.03)"; }}
+                >
+                  Book a Call
+                </Link>
 
                 {/* Hamburger — mobile only */}
                 <motion.button

@@ -311,7 +311,7 @@ export default function ServicesSection() {
   const isInView = useInView(ref, { once: true, margin: "-80px 0px" });
 
   return (
-    <section id="services" className="relative py-28 overflow-hidden">
+    <section id="services" data-atmo="services" className="relative py-28 overflow-hidden">
       {/* Ambient blob */}
       <div
         aria-hidden

@@ -37,17 +37,23 @@ interface LiquidGlassCardProps {
   children?: React.ReactNode;
 }
 
-/* detect backdrop-filter: url() support once */
-const supportsFilterUrl =
-  typeof window !== "undefined" &&
-  (() => {
-    const el = document.createElement("div");
-    el.style.cssText = "backdrop-filter: url(#t)";
-    return (
-      el.style.backdropFilter === "url(#t)" ||
-      el.style.backdropFilter === 'url("#t")'
-    );
-  })();
+/* detect backdrop-filter: url() support — runs client-side only */
+function checkFilterUrlSupport(): boolean {
+  const el = document.createElement("div");
+  el.style.cssText = "backdrop-filter: url(#t)";
+  return (
+    el.style.backdropFilter === "url(#t)" ||
+    el.style.backdropFilter === 'url("#t")'
+  );
+}
+
+let _supportsFilterUrl: boolean | null = null;
+function supportsFilterUrl(): boolean {
+  if (_supportsFilterUrl === null) {
+    _supportsFilterUrl = checkFilterUrlSupport();
+  }
+  return _supportsFilterUrl;
+}
 
 export default function LiquidGlassCard({
   depth = 10,
@@ -79,7 +85,7 @@ export default function LiquidGlassCard({
     filterLayer.style.width = `${w}px`;
     filterLayer.style.height = `${h}px`;
 
-    if (supportsFilterUrl) {
+    if (supportsFilterUrl()) {
       const filterUri = getDisplacementFilter({
         height: h,
         width: w,
