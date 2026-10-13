@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { MaskLine } from "./mask-line";
 import { ScrollWords } from "./scroll-words";
 import { WrittenWords } from "./written-words";
+import { BrandIntro } from "./brand-intro";
 import { useFitText } from "./use-fit-text";
 import { TrailText } from "./trail-text";
 import { useSlotGeometry, type SlotGeometry } from "./use-slot-geometry";
@@ -26,7 +27,9 @@ import {
 /* ── Scroll timeline (0 → 1 across the pinned section) ───────────────────── */
 const T = {
   grow: [0, 0.22],
-  quote: [0.12, 0.24],
+  brandSweep: [0.02, 0.11],
+  brandOut: [0.1, 0.15],
+  quote: [0.14, 0.26],
   quoteOut: [0.3, 0.33],
   word: [0.32, 0.5],
   shrink: [0.32, 0.52],
@@ -126,7 +129,7 @@ type SignatureRevealProps = {
   className?: string;
 };
 
-export function SignatureReveal({ content = signatureRevealContent, length = 560, className }: SignatureRevealProps) {
+export function SignatureReveal({ content = signatureRevealContent, length = 600, className }: SignatureRevealProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const letterRef = useRef<HTMLSpanElement>(null);
@@ -136,7 +139,12 @@ export function SignatureReveal({ content = signatureRevealContent, length = 560
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start start", "end end"] });
   // Smooths stepped mouse-wheel input so every scroll tick glides instead of jumping.
   const smooth = useSpring(scrollYProgress, { stiffness: 170, damping: 34, mass: 0.35, restDelta: 0.0002 });
+  // Separate progress for the approach (section scrolling into view) — drives the logo reveal.
+  const { scrollYProgress: enterProgress } = useScroll({ target: sectionRef, offset: ["start 0.85", "start start"] });
+  const enterSmooth = useSpring(enterProgress, { stiffness: 170, damping: 34, mass: 0.35, restDelta: 0.0002 });
   const staticProgress = useMotionValue<number>(T.settled);
+  const staticEnter = useMotionValue<number>(1);
+  const enter: MotionValue<number> = reduce ? staticEnter : enterSmooth;
   const p: MotionValue<number> = reduce ? staticProgress : smooth;
 
   useFitText(wordRef, { fill: 0.92, maxPx: 300 });
@@ -274,6 +282,14 @@ export function SignatureReveal({ content = signatureRevealContent, length = 560
           <motion.div
             style={{ opacity: hairline }}
             className="pointer-events-none absolute inset-0 rounded-[inherit] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.12)]"
+          />
+
+          <BrandIntro
+            logo={content.logo}
+            enter={enter}
+            progress={p}
+            sweep={[T.brandSweep[0], T.brandSweep[1]]}
+            out={[T.brandOut[0], T.brandOut[1]]}
           />
 
           {content.quote && (

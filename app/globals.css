@@ -210,6 +210,7 @@
   --font-signature:       var(--font-pretendard), ui-sans-serif, system-ui, sans-serif;
   --font-signature-serif: var(--font-newsreader), ui-serif, Georgia, serif;
   --font-signature-hand:  var(--font-caveat), "Segoe Print", cursive;
+  --font-impact:          var(--font-lexend-giga), ui-sans-serif, system-ui, sans-serif;
 
   /* ── Border Radius ── */
   --radius-xs:   4px;

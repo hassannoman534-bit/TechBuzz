@@ -1,5 +1,5 @@
 import localFont from "next/font/local";
-import { Newsreader, Caveat } from "next/font/google";
+import { Newsreader, Caveat, Lexend_Giga } from "next/font/google";
 
 /** Display + UI sans: the closest match to the reference wordmark (heavy neo-grotesk). */
 export const pretendard = localFont({
@@ -19,3 +19,6 @@ export const newsreader = Newsreader({
 
 /** Handwriting for the pulled quote shown over the reveal frame. */
 export const caveat = Caveat({ subsets: ["latin"], weight: ["500", "600"], display: "swap", variable: "--font-caveat" });
+
+/** Ultra-thin giant word for the Impact Reveal section. */
+export const lexendGiga = Lexend_Giga({ subsets: ["latin"], weight: ["200"], display: "swap", variable: "--font-lexend-giga" });

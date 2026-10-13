@@ -4,7 +4,7 @@ import "./globals.css";
 import SmoothScrollProvider from "@/components/providers/SmoothScrollProvider";
 import CustomCursor from "@/components/ui/CustomCursor";
 import { AtmosphereController } from "@/components/atmosphere/atmosphere-controller";
-import { pretendard, newsreader, caveat } from "./fonts";
+import { pretendard, newsreader, caveat, lexendGiga } from "./fonts";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,7 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${urbanist.variable} ${syne.variable} ${inter.variable} ${pretendard.variable} ${newsreader.variable} ${caveat.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${urbanist.variable} ${syne.variable} ${inter.variable} ${pretendard.variable} ${newsreader.variable} ${caveat.variable} ${lexendGiga.variable} h-full antialiased`}
     >
       <body className="bg-void text-ink antialiased" suppressHydrationWarning>
         <div aria-hidden className="atmosphere" />

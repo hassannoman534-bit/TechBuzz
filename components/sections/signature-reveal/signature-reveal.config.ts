@@ -6,6 +6,12 @@ export type SignatureImage = {
   alt: string;
 };
 
+export type SignatureLogo = {
+  /** Brand logo for the opening beat — SVG preferred, or a transparent PNG/WebP. Light version for dark backgrounds. */
+  src: string;
+  alt: string;
+};
+
 export type SignatureRevealContent = {
   intro: string;
   /** The word is split around the bracketed letter: before + ( letter ) + after */
@@ -17,6 +23,8 @@ export type SignatureRevealContent = {
   image: SignatureImage;
   /** Image B — crossfades in as the frame shrinks; also fills the letter during the morph. Subject centred. */
   detailImage: SignatureImage;
+  /** Logo revealed inside the card before the quote. Omit to show a "TechBuzz" wordmark instead. */
+  logo?: SignatureLogo;
   /** One-liner shown over image A at full size. Optional. */
   quote?: string;
 };
@@ -29,6 +37,7 @@ export const signatureRevealContent: SignatureRevealContent = {
   serifLines: ["Digital Agency", "Lahore, Worldwide"],
   subtitle: "Brands people can't stop talking about.",
   quote: "Attention is rented. Resonance is owned.",
+  logo: { src: "/images/techbuzz-logo.png", alt: "TechBuzz" },
   image: {
     src: "/images/sig-aura.webp",
     srcMobile: "/images/sig-aura-mobile.webp",
