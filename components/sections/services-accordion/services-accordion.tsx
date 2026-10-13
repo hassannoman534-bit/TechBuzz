@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { motion, useMotionValueEvent, useScroll } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ServiceCard } from "./service-card";
@@ -34,27 +34,67 @@ export function ServicesAccordion({ content = servicesContent, className }: Serv
     setScrollIndex((prev) => (prev === next ? prev : next));
   });
 
-  // A tap/click/focus choice lasts until the scroll moves on to another card.
-  useEffect(() => {
-    setManualIndex(null);
-  }, [scrollIndex]);
-
-  // Hover intent: a short delay so sweeping the mouse across the list doesn't flicker cards open.
-  const hover = useCallback((i: number) => {
+  const cancelPending = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    hoverTimer.current = setTimeout(() => setHoverIndex(i), HOVER_INTENT_MS);
+    hoverTimer.current = null;
   }, []);
-
-  const select = useCallback((i: number) => setManualIndex(i), []);
 
   const release = useCallback(() => {
-    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    cancelPending();
     setHoverIndex(null);
-  }, []);
+  }, [cancelPending]);
 
-  useEffect(() => () => {
-    if (hoverTimer.current) clearTimeout(hoverTimer.current);
-  }, []);
+  // Scrolling always takes control back: when the scroll moves to another card, any hover or tap choice ends.
+  useEffect(() => {
+    release();
+    setManualIndex(null);
+  }, [scrollIndex, release]);
+
+  /**
+   * Hover = REAL mouse movement only. When the page scrolls under a resting cursor, browsers fire
+   * synthetic pointer events with zero movement; those are ignored so scrolling never opens the card
+   * that happens to slide under the mouse.
+   */
+  const onPointerMove = useCallback(
+    (e: ReactPointerEvent<HTMLUListElement>) => {
+      if (e.pointerType !== "mouse" || (e.movementX === 0 && e.movementY === 0)) return;
+      const li = (e.target as HTMLElement).closest<HTMLElement>("li[data-index]");
+      if (!li) return; // in the gap between cards: keep the current card
+      const i = Number(li.dataset.index);
+      if (i === hoverIndex && !hoverTimer.current) return;
+      cancelPending();
+      // Hover intent: short delay so sweeping across the list doesn't flicker cards open.
+      // When it fires, only open if the mouse is genuinely still over that card.
+      hoverTimer.current = setTimeout(() => {
+        hoverTimer.current = null;
+        if (li.matches(":hover")) setHoverIndex(i);
+      }, HOVER_INTENT_MS);
+    },
+    [hoverIndex, cancelPending],
+  );
+
+  // Safety net for missed "leave" events (fast exits, scrolling out from under the cursor, tab switch).
+  const hoverActive = hoverIndex !== null;
+  useEffect(() => {
+    const list = listRef.current;
+    const check = (e: PointerEvent): void => {
+      if (!list || list.contains(e.target as Node)) return;
+      if (hoverTimer.current || hoverActive) release();
+    };
+    const onBlur = (): void => release();
+    document.addEventListener("pointermove", check, { passive: true });
+    document.documentElement.addEventListener("pointerleave", onBlur);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      document.removeEventListener("pointermove", check);
+      document.documentElement.removeEventListener("pointerleave", onBlur);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, [hoverActive, release]);
+
+  useEffect(() => cancelPending, [cancelPending]);
+
+  const select = useCallback((i: number) => setManualIndex(i), []);
 
   const activeIndex = hoverIndex ?? manualIndex ?? scrollIndex;
   const count = String(services.length).padStart(2, "0");
@@ -104,12 +144,13 @@ export function ServicesAccordion({ content = servicesContent, className }: Serv
         */}
         <ul
           ref={listRef}
+          onPointerMove={onPointerMove}
           onPointerLeave={release}
           style={{ ["--svc-n" as string]: services.length }}
           className="flex h-[calc(var(--svc-n)*var(--svc-row)+(var(--svc-n)-1)*0.75rem+var(--svc-open)-var(--svc-row))] flex-col gap-3 [contain:layout_style]"
         >
           {services.map((service, i) => (
-            <ServiceCard key={service.title} service={service} index={i} active={i === activeIndex} onHover={hover} onSelect={select} />
+            <ServiceCard key={service.title} service={service} index={i} active={i === activeIndex} onSelect={select} />
           ))}
         </ul>
       </div>

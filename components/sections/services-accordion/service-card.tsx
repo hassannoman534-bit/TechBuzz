@@ -14,8 +14,6 @@ type ServiceCardProps = {
   service: Service;
   index: number;
   active: boolean;
-  /** Mouse hover (wins while the pointer rests on the card) */
-  onHover: (index: number) => void;
   /** Click, tap or keyboard focus */
   onSelect: (index: number) => void;
 };
@@ -25,7 +23,7 @@ type ServiceCardProps = {
  * Opening uses an overshooting curve (the jelly feel); closing settles without overshoot.
  * The list's total height never changes, so nothing outside the list re-lays out.
  */
-export function ServiceCard({ service, index, active, onHover, onSelect }: ServiceCardProps) {
+export function ServiceCard({ service, index, active, onSelect }: ServiceCardProps) {
   const number = String(index + 1).padStart(2, "0");
   const panelId = `service-panel-${index}`;
 
@@ -38,7 +36,7 @@ export function ServiceCard({ service, index, active, onHover, onSelect }: Servi
           ? "h-[var(--svc-open)] duration-[760ms] ease-[cubic-bezier(0.34,1.32,0.64,1)]"
           : "h-[var(--svc-row)] duration-[560ms] ease-[cubic-bezier(0.4,0,0.2,1)]",
       )}
-      onPointerEnter={(e) => e.pointerType === "mouse" && onHover(index)}
+      data-index={index}
     >
       {/* Expanded surface: deep gradient + glow, faded in (opacity only) */}
       <motion.div
