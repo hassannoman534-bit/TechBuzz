@@ -92,11 +92,13 @@ export default function Navbar() {
                 : "rgba(8,10,20,0.60)"
             }
             style={{
-              border:    "1px solid rgba(255,255,255,0.13)",
+              border:    scrolled
+                ? "1px solid rgba(255,255,255,0.10)"
+                : "1px solid rgba(255,255,255,0.06)",
               boxShadow: scrolled
                 ? "0 16px 48px rgba(0,0,0,0.60), 0 1px 0 rgba(255,255,255,0.10) inset"
                 : "0 8px 32px rgba(0,0,0,0.40), 0 1px 0 rgba(255,255,255,0.08) inset",
-              transition: "box-shadow 0.35s ease",
+              transition: "box-shadow 0.35s ease, border-color 0.35s ease",
             }}
           >
             {/* ── Inner layout ── */}

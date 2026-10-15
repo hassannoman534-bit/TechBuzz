@@ -89,8 +89,8 @@
   z-index: -10;
   pointer-events: none;
   background:
-    radial-gradient(70vmax 55vmax at var(--atmo-ax) var(--atmo-ay), var(--atmo-a), transparent 70%),
-    radial-gradient(60vmax 50vmax at var(--atmo-bx) var(--atmo-by), var(--atmo-b), transparent 70%),
+    radial-gradient(90vmax 75vmax at var(--atmo-ax) var(--atmo-ay), var(--atmo-a), transparent),
+    radial-gradient(80vmax 65vmax at var(--atmo-bx) var(--atmo-by), var(--atmo-b), transparent),
     var(--color-void);
 
   &::after {

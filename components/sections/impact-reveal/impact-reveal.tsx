@@ -116,7 +116,6 @@ export function ImpactReveal({ content = impactRevealContent, length = 520, clas
     return lerp(W * 0.7, -(trackW + W * 0.02), k);
   });
   const trackOpacity = useTransform(p, [T.reveal[0], T.reveal[1], T.set[0] - 0.01, T.set[0] + 0.025], [0, 1, 1, 0]);
-  const eyebrowOpacity = useTransform(p, [T.eyebrowIn[0], T.eyebrowIn[1], T.eyebrowOut[0], T.eyebrowOut[1]], [0, 1, 1, 0]);
 
   /* CTA on the dark, after the light sets */
   const ctaOpacity = useTransform(p, [T.cta[0], T.cta[1]], [0, 1]);
@@ -162,13 +161,6 @@ export function ImpactReveal({ content = impactRevealContent, length = 520, clas
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(45%_55%_at_12%_18%,rgb(196_184_255/0.55),transparent),radial-gradient(40%_50%_at_88%_82%,rgb(178_240_255/0.55),transparent),radial-gradient(30%_35%_at_78%_14%,rgb(255_214_232/0.35),transparent)]"
         />
 
-        {/* Eyebrow */}
-        <motion.p
-          style={{ opacity: eyebrowOpacity }}
-          className="absolute inset-x-0 top-[calc(var(--nav-offset,5.5rem)+2svh)] text-center font-signature-serif text-[0.8rem] uppercase tracking-[0.24em] text-[#4b5070]"
-        >
-          {content.eyebrow}
-        </motion.p>
 
         {/*
           Safe area below the navbar and eyebrow, split into three rows that can never overlap:
@@ -194,11 +186,11 @@ export function ImpactReveal({ content = impactRevealContent, length = 520, clas
           <div className="relative h-(--lane) shrink-0">{bottomLane.map(chipFor)}</div>
         </motion.div>
 
-        {/* Horizon glow left behind when the light sets */}
+        {/* Glow behind the CTA: fully contained in the stage and feathered at top and bottom, so the hand-off to the footer has no edge */}
         <motion.div
           aria-hidden
           style={{ opacity: horizon }}
-          className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-[min(110vw,1300px)] -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(closest-side,rgb(123_97_255/0.22),rgb(123_97_255/0.08)_45%,rgb(34_216_255/0.04)_70%,transparent)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_48%_at_50%_52%,rgb(123_97_255/0.22),rgb(123_97_255/0.08)_45%,rgb(34_216_255/0.04)_70%,transparent_100%)] [mask-image:linear-gradient(to_bottom,transparent_0%,#000_20%,#000_80%,transparent_100%)]"
         />
 
         {/* CTA */}

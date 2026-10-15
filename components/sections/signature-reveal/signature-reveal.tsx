@@ -310,11 +310,11 @@ export function SignatureReveal({ content = signatureRevealContent, length = 600
           )}
         </motion.div>
 
-        {/* Exit bloom — hands off to the next section */}
+        {/* Exit bloom: stays inside the pinned stage and fades to transparent at its edges, so no hard line appears when the stage scrolls away */}
         <motion.div
           aria-hidden
           style={{ opacity: glowOpacity, scale: glowScale }}
-          className="pointer-events-none absolute inset-x-[-20%] bottom-[-45%] h-[90%] bg-[radial-gradient(closest-side,rgb(123_97_255/0.32),rgb(34_216_255/0.08)_55%,transparent)]"
+          className="pointer-events-none absolute inset-0 origin-bottom bg-[radial-gradient(70%_60%_at_50%_88%,rgb(123_97_255/0.3),rgb(34_216_255/0.07)_55%,transparent_100%)] [mask-image:linear-gradient(to_bottom,transparent_0%,#000_35%,#000_62%,transparent_100%)]"
         />
       </div>
     </section>
