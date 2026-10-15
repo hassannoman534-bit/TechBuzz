@@ -147,7 +147,7 @@ export function ServicesAccordion({ content = servicesContent, className }: Serv
           onPointerMove={onPointerMove}
           onPointerLeave={release}
           style={{ ["--svc-n" as string]: services.length }}
-          className="flex h-[calc(var(--svc-n)*var(--svc-row)+(var(--svc-n)-1)*0.75rem+var(--svc-open)-var(--svc-row))] flex-col gap-3 [contain:layout_style]"
+          className="flex h-[calc(var(--svc-n)*var(--svc-row)+(var(--svc-n)-1)*0.75rem+var(--svc-open)-var(--svc-row))] flex-col gap-3"
         >
           {services.map((service, i) => (
             <ServiceCard key={service.title} service={service} index={i} active={i === activeIndex} onSelect={select} />

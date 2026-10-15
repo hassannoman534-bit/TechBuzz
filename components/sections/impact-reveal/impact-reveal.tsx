@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef } from "react";
-import Link from "next/link";
+import { GlassButton } from "@/components/ui/GlassButton";
 import {
   motion,
   useMotionValue,
@@ -215,20 +215,13 @@ export function ImpactReveal({ content = impactRevealContent, length = 520, clas
           </h2>
           <p className="mt-6 max-w-[46ch] font-signature text-[clamp(1rem,1.3vw,1.2rem)] leading-relaxed text-ink-muted">{cta.body}</p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href={cta.primary.href}
-              className="group relative inline-flex items-center gap-2 rounded-full bg-[linear-gradient(100deg,#f8f7ff,#ddd6fd_60%,#c9f4ff)] px-7 py-3.5 font-signature text-[0.95rem] font-semibold text-[#0b0e1f] shadow-[0_10px_40px_-10px_rgb(180_166_255/0.7)] transition-transform duration-300 ease-out hover:scale-[1.03]"
-            >
+            <GlassButton href={cta.primary.href} variant="glow" size="lg" trailingIcon={<span aria-hidden>→</span>}>
               {cta.primary.label}
-              <span aria-hidden className="transition-transform duration-300 group-hover:translate-x-0.5">→</span>
-            </Link>
+            </GlassButton>
             {cta.secondary && (
-              <Link
-                href={cta.secondary.href}
-                className="inline-flex items-center rounded-full px-7 py-3.5 font-signature text-[0.95rem] font-medium text-ink shadow-[inset_0_0_0_1px_rgb(255_255_255/0.16)] transition-colors duration-300 hover:bg-white/5"
-              >
+              <GlassButton href={cta.secondary.href} variant="outline" size="lg">
                 {cta.secondary.label}
-              </Link>
+              </GlassButton>
             )}
           </div>
         </motion.div>

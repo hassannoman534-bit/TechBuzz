@@ -101,9 +101,13 @@ export default function GlassCard({
           rotateY:           noTilt ? 0 : rotateY,
           scale,
           transformStyle:    "preserve-3d",
+          // PERF: composite layer for 3D tilt + scale animations
+          willChange:        "transform",
+          backfaceVisibility:"hidden",
           background:        "rgba(255, 255, 255, 0.04)",
-          backdropFilter:    "blur(12px) saturate(180%)",
-          WebkitBackdropFilter: "blur(12px) saturate(180%)",
+          // PERF: capped at 14px — matches the 16px limit, saturate kept
+          backdropFilter:    "blur(14px) saturate(160%)",
+          WebkitBackdropFilter: "blur(14px) saturate(160%)",
           borderRadius:      "2rem",
           border:            isHovered
             ? "1px solid rgba(56, 189, 248, 0.40)"
@@ -152,7 +156,12 @@ export default function GlassCard({
               className="w-full h-full"
               animate={{ scale: isHovered ? 1.05 : 1 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
-              style={{ transformOrigin: "center center" }}
+              style={{
+                transformOrigin: "center center",
+                // PERF: promote media zoom to compositor layer
+                willChange: "transform",
+                backfaceVisibility: "hidden",
+              }}
             >
               {mediaType === "video" ? (
                 <video

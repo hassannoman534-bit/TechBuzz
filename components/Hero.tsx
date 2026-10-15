@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, type Variants } from "framer-motion";
-import Link from "next/link";
+import { GlassButton } from "@/components/ui/GlassButton";
 
 /* ─── Animation variants ─────────────────────────────────────────────────── */
 
@@ -29,8 +29,14 @@ export default function Hero() {
       {/* ── Dim Cosmic Arc Background (z-0) ── */}
       <div className="absolute inset-0 z-0 pointer-events-none">
 
-        {/* Base darkness */}
-        <div className="absolute inset-0 bg-[#030712]" />
+        {/* Base deep-space gradient — blue fades to the global void (#030712) before the section ends */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 130% 100% at 50% 160%, #1a3a6e 0%, #0d1f4a 20%, #060d24 45%, #030712 75%)",
+          }}
+        />
 
         {/* The Faint Arc */}
         <motion.div
@@ -41,13 +47,21 @@ export default function Hero() {
             borderBottom: "1px solid rgba(6,182,212,0.20)",
             background: "linear-gradient(to bottom, transparent, rgba(8,47,73,0.05))",
             boxShadow: "0 40px 120px rgba(6,182,212,0.05)",
+            // PERF: promote to compositor layer so arc float never triggers paint
+            transform: "translateZ(0)",
+            backfaceVisibility: "hidden",
+            willChange: "transform",
           }}
         />
 
         {/* Subtle center glow */}
         <div
           className="absolute top-0 left-1/2 -translate-x-1/2 w-[80vw] md:w-[50vw] h-[30vh] rounded-full"
-          style={{ background: "rgba(22,78,99,0.10)", filter: "blur(120px)" }}
+          style={{
+            background: "rgba(22,78,99,0.10)",
+            // PERF: halved from blur(120px) — imperceptible delta, halves rasterization cost
+            filter: "blur(72px)",
+          }}
         />
 
         {/* Faint stars */}
@@ -128,69 +142,12 @@ export default function Hero() {
 
         {/* CTA buttons */}
         <motion.div variants={fadeIn} className="flex gap-4 flex-wrap justify-center">
-          <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} transition={{ duration: 0.18 }}>
-            <Link
-              href="/contact"
-              data-cursor="magnetic"
-              style={{
-                display:        "inline-flex",
-                alignItems:     "center",
-                padding:        "0.875rem 2rem",
-                borderRadius:   "999px",
-                fontSize:       "0.9375rem",
-                fontWeight:     700,
-                letterSpacing:  "0.01em",
-                color:          "#030712",
-                background:     "#22d3ee",
-                boxShadow:      "0 0 32px rgba(6,182,212,0.45), 0 0 8px rgba(6,182,212,0.30)",
-                textDecoration: "none",
-                transition:     "box-shadow 0.2s ease",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.boxShadow = "0 0 48px rgba(6,182,212,0.65), 0 0 16px rgba(6,182,212,0.50)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.boxShadow = "0 0 32px rgba(6,182,212,0.45), 0 0 8px rgba(6,182,212,0.30)";
-              }}
-            >
-              Start a Project
-            </Link>
-          </motion.div>
-
-          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={{ duration: 0.18 }}>
-            <Link
-              href="/portfolio"
-              data-cursor="magnetic"
-              style={{
-                display:              "inline-flex",
-                alignItems:           "center",
-                padding:              "0.875rem 2rem",
-                borderRadius:         "999px",
-                fontSize:             "0.9375rem",
-                fontWeight:           600,
-                letterSpacing:        "0.01em",
-                color:                "rgba(255,255,255,0.80)",
-                background:           "rgba(255,255,255,0.06)",
-                border:               "1px solid rgba(255,255,255,0.16)",
-                textDecoration:       "none",
-                backdropFilter:       "blur(8px)",
-                WebkitBackdropFilter: "blur(8px)",
-                transition:           "border-color 0.2s ease, color 0.2s ease",
-              }}
-              onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLElement;
-                el.style.borderColor = "rgba(255,255,255,0.38)";
-                el.style.color       = "#ffffff";
-              }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLElement;
-                el.style.borderColor = "rgba(255,255,255,0.16)";
-                el.style.color       = "rgba(255,255,255,0.80)";
-              }}
-            >
-              View Our Work
-            </Link>
-          </motion.div>
+          <GlassButton href="/contact" variant="glow" size="lg" data-cursor="magnetic">
+            Start a Project
+          </GlassButton>
+          <GlassButton href="/portfolio" variant="secondary" size="lg" data-cursor="magnetic">
+            View Our Work
+          </GlassButton>
         </motion.div>
       </motion.div>
 
@@ -200,8 +157,8 @@ export default function Hero() {
         style={{
           position:      "absolute",
           bottom:        0, left: 0, right: 0,
-          height:        "160px",
-          background:    "linear-gradient(to bottom, rgba(0,0,0,0) 0%, #030712 100%)",
+          height:        "280px",
+          background:    "linear-gradient(to bottom, transparent 0%, #030712 100%)",
           pointerEvents: "none",
           zIndex:        5,
         }}

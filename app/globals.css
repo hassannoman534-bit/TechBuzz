@@ -274,6 +274,16 @@
   66%       { transform: translate(-20px, 20px) scale(0.95); }
 }
 
+/* PERF: CSS-only background orb animations — avoids JS Framer loops on decorative elements */
+@keyframes orbBreathe {
+  0%, 100% { opacity: 0.18; transform: scale(1) translateZ(0); }
+  50%       { opacity: 0.28; transform: scale(1.04) translateZ(0); }
+}
+@keyframes subtlePulse {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 0.8; }
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
    BASE RESET & ROOT
 ───────────────────────────────────────────────────────────────────────────── */
@@ -585,4 +595,17 @@ img, video {
   }
   .blob { animation: none; }
   .marquee-track { animation: none; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PERF: content-visibility — skip rendering off-screen sections entirely
+   until they approach the viewport. Saves paint + layout for below-fold content.
+───────────────────────────────────────────────────────────────────────────── */
+.section-lazy {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 800px;
+}
+.section-lazy-tall {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1200px;
 }

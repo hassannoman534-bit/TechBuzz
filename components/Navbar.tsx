@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import LiquidGlassCard from "@/components/ui/LiquidGlassCard";
+import { GlassButton } from "@/components/ui/GlassButton";
 
 /* ─── Nav data ───────────────────────────────────────────────────────────── */
 
@@ -198,42 +199,10 @@ export default function Navbar() {
 
               {/* Right — CTA + hamburger */}
               <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", flexShrink: 0 }}>
-                {/* CTA — liquid glass button */}
-                <Link
-                  href="/contact"
-                  style={{
-                    display:        "inline-flex",
-                    alignItems:     "center",
-                    padding:        "0.38rem 1rem",
-                    borderRadius:   "12px",
-                    fontSize:       "0.8125rem",
-                    fontWeight:     600,
-                    color:          "#ffffff",
-                    textDecoration: "none",
-                    background:     "rgba(255,255,255,0.13)",
-                    border:         "1px solid rgba(255,255,255,0.22)",
-                    boxShadow:      "inset 0 0.5px 0 rgba(255,255,255,0.25)",
-                    transition:     "background 0.2s ease, border-color 0.2s ease, transform 0.18s ease",
-                    whiteSpace:     "nowrap",
-                    letterSpacing:  "0.01em",
-                  }}
-                  onMouseEnter={(e) => {
-                    const el = e.currentTarget as HTMLElement;
-                    el.style.background  = "rgba(255,255,255,0.22)";
-                    el.style.borderColor = "rgba(255,255,255,0.40)";
-                    el.style.transform   = "scale(1.03)";
-                  }}
-                  onMouseLeave={(e) => {
-                    const el = e.currentTarget as HTMLElement;
-                    el.style.background  = "rgba(255,255,255,0.13)";
-                    el.style.borderColor = "rgba(255,255,255,0.22)";
-                    el.style.transform   = "scale(1)";
-                  }}
-                  onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(0.94)"; }}
-                  onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.03)"; }}
-                >
+                {/* CTA — glass button */}
+                <GlassButton href="/contact" variant="primary" size="md">
                   Book a Call
-                </Link>
+                </GlassButton>
 
                 {/* Hamburger — mobile only */}
                 <motion.button
@@ -376,22 +345,9 @@ export default function Navbar() {
 
                   {/* CTA */}
                   <div style={{ padding: "1.25rem", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-                    <Link
-                      href="/contact"
-                      onClick={() => setMobileOpen(false)}
-                      style={{
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        padding: "0.875rem",
-                        borderRadius: "14px",
-                        fontSize: "0.9375rem",
-                        fontWeight: 600,
-                        color: "#000",
-                        textDecoration: "none",
-                        background: "#ffffff",
-                      }}
-                    >
+                    <GlassButton href="/contact" variant="primary" size="md" fullWidth onClick={() => setMobileOpen(false)}>
                       Book a Call
-                    </Link>
+                    </GlassButton>
                   </div>
                 </div>
               </LiquidGlassCard>

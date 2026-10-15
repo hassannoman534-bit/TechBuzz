@@ -94,6 +94,8 @@ export function ServiceCard({ service, index, active, onSelect }: ServiceCardPro
         initial={false}
         animate={{ opacity: active ? 1 : 0, y: active ? 0 : 14 }}
         transition={{ ...FADE, delay: active ? 0.14 : 0 }}
+        // PERF: y+opacity are GPU-composited; willChange keeps it on compositor layer
+        style={{ willChange: "transform, opacity" }}
         className="max-w-[44ch] px-[clamp(1.25rem,3vw,2.75rem)] pl-[calc(clamp(1.25rem,3vw,2.75rem)+2.6rem)] max-md:pl-[clamp(1.25rem,3vw,2.75rem)]"
       >
         <p className="font-signature text-[clamp(0.98rem,1.15vw,1.1rem)] leading-[1.65] text-ink/75">{service.description}</p>
