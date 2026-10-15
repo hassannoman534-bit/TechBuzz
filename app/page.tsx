@@ -3,6 +3,7 @@ import Hero from "@/components/Hero";
 import { SignatureReveal } from "@/components/sections/signature-reveal/signature-reveal";
 import { ImpactReveal } from "@/components/sections/impact-reveal/impact-reveal";
 import { ServicesAccordion } from "@/components/sections/services-accordion/services-accordion";
+import { SiteFooter } from "@/components/sections/site-footer/site-footer";
 export default function Home() {
   return (
     <div className="relative min-h-screen bg-[#030712] overflow-x-clip">
@@ -13,6 +14,7 @@ export default function Home() {
         <ImpactReveal />
         <ServicesAccordion />
       </main>
+      <SiteFooter />
     </div>
   );
 }

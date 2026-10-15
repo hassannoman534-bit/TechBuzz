@@ -104,7 +104,7 @@ export default function Hero() {
               fontSize: "10px", fontWeight: 600, letterSpacing: "0.16em",
               textTransform: "uppercase", color: "#22d3ee",
             }}>
-              Award-Winning Digital Agency&nbsp;&nbsp;&#183;&nbsp;&nbsp;Lahore
+              Award-Winning Digital Studio&nbsp;&nbsp;&#183;&nbsp;&nbsp;Lahore
             </span>
           </div>
         </motion.div>

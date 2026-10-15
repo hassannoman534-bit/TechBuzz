@@ -212,6 +212,10 @@
   --font-signature-hand:  var(--font-caveat), "Segoe Print", cursive;
   --font-impact:          var(--font-lexend-giga), ui-sans-serif, system-ui, sans-serif;
 
+  /* Site footer fonts (Outfit display + Inter Tight text). */
+  --font-footer-display:  var(--font-outfit), "Helvetica Neue", Arial, sans-serif;
+  --font-footer-text:     var(--font-inter-tight), "Helvetica Neue", Arial, sans-serif;
+
   /* ── Border Radius ── */
   --radius-xs:   4px;
   --radius-sm:   8px;

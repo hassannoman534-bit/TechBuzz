@@ -1,5 +1,5 @@
 import localFont from "next/font/local";
-import { Newsreader, Caveat, Lexend_Giga } from "next/font/google";
+import { Newsreader, Caveat, Lexend_Giga, Outfit, Inter_Tight } from "next/font/google";
 
 /** Display + UI sans: the closest match to the reference wordmark (heavy neo-grotesk). */
 export const pretendard = localFont({
@@ -22,3 +22,9 @@ export const caveat = Caveat({ subsets: ["latin"], weight: ["500", "600"], displ
 
 /** Ultra-thin giant word for the Impact Reveal section. */
 export const lexendGiga = Lexend_Giga({ subsets: ["latin"], weight: ["200"], display: "swap", variable: "--font-lexend-giga" });
+
+/** Footer giant wordmark (heavy neo-grotesk display). */
+export const outfit = Outfit({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-outfit", display: "swap" });
+
+/** Footer UI/body text. */
+export const interTight = Inter_Tight({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-inter-tight", display: "swap" });
