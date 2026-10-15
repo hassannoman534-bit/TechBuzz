@@ -70,28 +70,9 @@ export function SiteFooter({ content = footerContent, className }: SiteFooterPro
             {/* Upper: headline + contact | menu | studio */}
             <div className="grid grid-cols-2 gap-x-6 gap-y-6 md:grid-cols-12 md:gap-y-10">
               <div className="col-span-2 md:col-span-6 lg:col-span-7">
-                <p className={cn(label, "hidden md:block")}>( {content.eyebrow} )</p>
-                <h2 className="font-signature text-[clamp(2.25rem,5.2vw,5rem)] font-bold leading-[0.95] tracking-[-0.03em] text-balance text-[#f4f3ff] md:mt-3">
+                <h2 className="font-sans text-[clamp(2.25rem,5.2vw,5rem)] font-bold leading-[0.95] tracking-[-0.03em] text-balance text-[#f4f3ff]">
                   {content.tagline.before}
-                  <span className="relative inline-block">
-                    <span className="text-spectrum">{content.tagline.highlight}</span>
-                    <svg aria-hidden viewBox="0 0 200 20" preserveAspectRatio="none" className="absolute -bottom-[0.12em] left-[-4%] h-[0.28em] w-[108%] overflow-visible">
-                      <motion.path
-                        d="M3 13 C 45 4, 95 3, 140 8 S 185 14, 197 6"
-                        fill="none"
-                        stroke="url(#tb-underline)"
-                        strokeWidth="4"
-                        strokeLinecap="round"
-                        style={{ pathLength: underline }}
-                      />
-                      <defs>
-                        <linearGradient id="tb-underline" x1="0" x2="1">
-                          <stop offset="0" stopColor="rgb(123 97 255)" />
-                          <stop offset="1" stopColor="rgb(34 216 255)" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                  </span>
+                  {content.tagline.highlight}
                   {content.tagline.after}
                 </h2>
 

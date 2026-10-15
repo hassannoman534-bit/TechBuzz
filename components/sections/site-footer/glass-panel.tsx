@@ -52,7 +52,7 @@ export function GlassPanel({ children, className, spotlight = true }: GlassPanel
       {spotlight && (
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 opacity-0 transition-opacity duration-500 group-hover/glass:opacity-100 bg-[radial-gradient(520px_circle_at_var(--mx,50%)_var(--my,0%),rgb(123_97_255/0.12),rgb(34_216_255/0.04)_40%,transparent_70%)]"
+          className="pointer-events-none absolute inset-0 -z-10 opacity-0 transition-opacity duration-300 group-hover/glass:opacity-100 motion-reduce:transition-none bg-[radial-gradient(520px_circle_at_var(--mx,50%)_var(--my,0%),rgb(123_97_255/0.12),rgb(34_216_255/0.04)_40%,transparent_70%)]"
         />
       )}
       {children}

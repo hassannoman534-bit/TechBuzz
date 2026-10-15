@@ -99,12 +99,12 @@ const FILL = [
   "block bg-clip-text text-[#f4f3ff]",
   "bg-[linear-gradient(175deg,rgb(255_255_255/0.42)_0%,rgb(255_255_255/0.10)_24%,rgb(255_255_255/0.035)_50%,rgb(123_97_255/0.22)_80%,rgb(34_216_255/0.14)_100%)]",
   "bg-[length:100%_160%] bg-[position:0_100%]",
-  "[transition-property:color,background-position] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]",
+  "[transition-property:color,background-position] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
   "group-hover/word:text-[rgb(244_243_255/0.03)] group-hover/word:bg-[position:0_0]",
 ].join(" ");
 
 /** Rim layer: the same glyph, drawn only as its lit edge, faded in on hover. */
-const RIM = "pointer-events-none absolute inset-0 block text-white opacity-0 transition-opacity duration-700 [filter:url(#tb-glass-rim)] group-hover/word:opacity-100";
+const RIM = "pointer-events-none absolute inset-0 block text-white opacity-0 transition-opacity duration-300 [filter:url(#tb-glass-rim)] group-hover/word:opacity-100 motion-reduce:transition-none";
 
 function Letter({ ch, index, progress, range }: LetterProps) {
   const y = useTransform(progress, range, ["102%", "0%"]);
@@ -113,7 +113,7 @@ function Letter({ ch, index, progress, range }: LetterProps) {
   return (
     <span className="inline-block overflow-hidden pb-[0.05em]">
       <motion.span style={{ y }} className="inline-block will-change-transform">
-        <span className="relative inline-block transition-[translate] duration-500 ease-[cubic-bezier(0.34,1.4,0.64,1)] hover:-translate-y-[6%]">
+        <span className="relative inline-block transform-gpu transition-[translate] duration-300 ease-[cubic-bezier(0.34,1.4,0.64,1)] hover:-translate-y-[6%] motion-reduce:transition-none">
           <span className={FILL} style={delay}>{glyph}</span>
           <span aria-hidden className={RIM} style={delay}>{glyph}</span>
         </span>
