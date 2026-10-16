@@ -3,6 +3,8 @@ import { Geist, Geist_Mono, Urbanist, Syne, Inter } from "next/font/google";
 import "./globals.css";
 import SmoothScrollProvider from "@/components/providers/SmoothScrollProvider";
 import CustomCursor from "@/components/ui/CustomCursor";
+import Navbar from "@/components/Navbar";
+import { HideOnScroll } from "@/components/ui/hide-on-scroll";
 import { AtmosphereController } from "@/components/atmosphere/atmosphere-controller";
 import { pretendard, newsreader, caveat, lexendGiga, outfit, interTight } from "./fonts";
 
@@ -48,6 +50,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="bg-void text-ink antialiased" suppressHydrationWarning>
         <div aria-hidden className="atmosphere" />
         <AtmosphereController />
+        <HideOnScroll>
+          <Navbar />
+        </HideOnScroll>
         <SmoothScrollProvider>
           <main className="relative overflow-x-clip">{children}</main>
         </SmoothScrollProvider>

@@ -35,7 +35,6 @@ export function SiteFooter({ content = footerContent, className }: SiteFooterPro
 
   const drift = useTransform(p, [0, 1], ["10vh", "0vh"]);
   const fade = useTransform(p, [0, 0.6], [0.2, 1]);
-  const underline = useTransform(p, [0.55, 0.9], [0, 1]);
 
   // Read the year after mount: `new Date()` during render blocks the prerender under
   // Next's Cache Components. The fallback keeps server/client markup identical.
@@ -66,17 +65,18 @@ export function SiteFooter({ content = footerContent, className }: SiteFooterPro
           style={{ y: drift, opacity: fade }}
           className="flex flex-1 flex-col justify-end px-[clamp(0.75rem,2.5vw,2.5rem)] pt-[clamp(4.75rem,11svh,7rem)] font-footer-text will-change-transform"
         >
-          <GlassPanel spotlight={!reduce} className="px-[clamp(1.25rem,3.2vw,3rem)] pt-[clamp(1.5rem,4svh,2.75rem)] pb-[clamp(1.1rem,2.5svh,1.75rem)]">
+          <GlassPanel spotlight={!reduce} className="px-[clamp(1.1rem,2.6vw,2.5rem)] pt-[clamp(1.2rem,3svh,2.1rem)] pb-[clamp(0.9rem,2svh,1.35rem)]">
             {/* Upper: headline + contact | menu | studio */}
-            <div className="grid grid-cols-2 gap-x-6 gap-y-6 md:grid-cols-12 md:gap-y-10">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-6 md:grid-cols-12 md:gap-y-8">
               <div className="col-span-2 md:col-span-6 lg:col-span-7">
-                <h2 className="font-sans text-[clamp(2.25rem,5.2vw,5rem)] font-bold leading-[0.95] tracking-[-0.03em] text-balance text-[#f4f3ff]">
+                <p className={cn(label, "hidden md:block")}>( {content.eyebrow} )</p>
+                <h2 className="font-footer-display text-[clamp(1.85rem,3.6vw,3.4rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-balance text-[#f4f3ff] md:mt-3">
                   {content.tagline.before}
                   {content.tagline.highlight}
                   {content.tagline.after}
                 </h2>
 
-                <div className="mt-[clamp(1.25rem,3.5svh,2.25rem)] flex flex-wrap items-end gap-x-10 gap-y-4">
+                <div className="mt-[clamp(1rem,2.6svh,1.75rem)] flex flex-wrap items-end gap-x-10 gap-y-4">
                   <div>
                     <p className={label}>New business</p>
                     <a href={`mailto:${content.email}`} className="group mt-1.5 inline-flex items-center gap-1.5 text-[clamp(1.05rem,1.5vw,1.35rem)] font-medium tracking-[-0.01em]">
@@ -138,10 +138,10 @@ export function SiteFooter({ content = footerContent, className }: SiteFooterPro
             </div>
 
             {/* Hairline divider */}
-            <div aria-hidden className="mt-[clamp(1.25rem,3.5svh,2.25rem)] h-px bg-gradient-to-r from-white/0 via-white/15 to-white/0" />
+            <div aria-hidden className="mt-[clamp(1rem,2.6svh,1.75rem)] h-px bg-gradient-to-r from-white/0 via-white/15 to-white/0" />
 
             {/* Lower: socials | copyright | back to top */}
-            <div className="mt-[clamp(1rem,2.2svh,1.5rem)] flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+            <div className="mt-[clamp(0.8rem,1.8svh,1.2rem)] flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
               <ul aria-label="Social media" className="flex flex-wrap gap-2.5 md:gap-3">
                 {content.socials.map((s, i) => (
                   <SocialChip key={s.label} social={s} progress={p} range={[0.5 + (i * 0.3) / n, 0.72 + (i * 0.3) / n]} />
@@ -165,7 +165,7 @@ export function SiteFooter({ content = footerContent, className }: SiteFooterPro
         </motion.div>
 
         {/* Giant wordmark, turns to glass on hover */}
-        <div className="flex justify-center px-[clamp(0.75rem,1.6vw,1.75rem)] pt-[clamp(0.5rem,1.5svh,1rem)] pb-[clamp(0.25rem,1vw,0.75rem)]">
+        <div className="overflow-hidden px-[clamp(0.25rem,0.6vw,0.75rem)] pt-[clamp(0.4rem,1.2svh,0.8rem)] pb-[clamp(0.2rem,0.6vw,0.5rem)]">
           <FooterWordmark text={content.wordmark} progress={p} />
         </div>
       </div>

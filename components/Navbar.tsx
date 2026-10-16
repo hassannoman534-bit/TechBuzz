@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -27,6 +28,11 @@ export default function Navbar() {
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
   const [scrolled,    setScrolled]    = useState(false);
   const [mobileOpen,  setMobileOpen]  = useState(false);
+  const [mounted,     setMounted]     = useState(false);
+
+  /* Portal target for the mobile overlay (the header is now inside a transformed
+     HideOnScroll wrapper, so fixed overlays must escape to <body> to fill the screen) */
+  useEffect(() => setMounted(true), []);
   const navRef        = useRef<HTMLDivElement>(null);
 
   /* Scroll listener */
@@ -52,14 +58,10 @@ export default function Navbar() {
 
   return (
     <>
-      {/* ── Fixed centering wrapper ── */}
+      {/* ── Centering wrapper (positioning handled by the HideOnScroll wrapper) ── */}
       <div
         style={{
-          position:       "fixed",
-          top:            "16px",
-          left:            0,
-          right:           0,
-          zIndex:          50,
+          paddingTop:     "16px",
           display:        "flex",
           justifyContent: "center",
           pointerEvents:  "none",
@@ -247,7 +249,8 @@ export default function Navbar() {
         </motion.div>
       </div>
 
-      {/* ── Mobile drawer ── */}
+      {/* ── Mobile drawer (portaled to <body> so it fills the viewport, not the transformed header) ── */}
+      {mounted && createPortal(
       <AnimatePresence>
         {mobileOpen && (
           <>
@@ -356,7 +359,9 @@ export default function Navbar() {
             </motion.div>
           </>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body,
+      )}
     </>
   );
 }
