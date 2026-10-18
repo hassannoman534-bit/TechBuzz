@@ -82,8 +82,9 @@ export default function LiquidGlassCard({
     const h = Math.round(rect.height);
     if (w === 0 || h === 0) return;
 
-    filterLayer.style.width = `${w}px`;
-    filterLayer.style.height = `${h}px`;
+    // The layer itself stays inset:0 (always exactly the pill's size); w/h here only size the
+    // generated displacement SVG. Setting an explicit px box used to leave a stale, oversized
+    // outline on the first frame until a re-measure.
 
     if (supportsFilterUrl()) {
       const filterUri = getDisplacementFilter({
@@ -143,6 +144,7 @@ export default function LiquidGlassCard({
           zIndex: 1,
           background: overlayColor,
           borderRadius: `${radius}px`,
+          pointerEvents: "none",
         }}
       />
 
@@ -159,6 +161,7 @@ export default function LiquidGlassCard({
           boxShadow: "inset 0 0 4px 0 rgba(250,250,250,0.5)",
           opacity: ready ? 1 : 0,
           transition: "opacity 0.2s ease",
+          pointerEvents: "none",
         }}
       />
 

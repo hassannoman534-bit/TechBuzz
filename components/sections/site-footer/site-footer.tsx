@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, useScroll, useSpring, useTransform, type MotionValue } from "framer-motion";
-import { ArrowUp, ArrowUpRight } from "lucide-react";
+import { ArrowDownLeft, ArrowUp, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
 import { GlassButton } from "@/components/ui/GlassButton";
@@ -12,11 +12,19 @@ import { LocalTime } from "./local-time";
 import { GlassPanel } from "./glass-panel";
 import { SocialChip } from "./social-chip";
 import { SocialIcon } from "./social-icons";
+import { FooterCurve } from "./footer-curve";
 import { footerContent, type FooterContent } from "./footer.config";
 
-type SiteFooterProps = { content?: FooterContent; className?: string };
+type SiteFooterProps = {
+  content?: FooterContent;
+  className?: string;
+  /** Background of the section directly above the footer (the curved edge uses it) */
+  curveColor?: string;
+};
 
 const label = "text-[0.7rem] font-medium uppercase tracking-[0.18em] text-[#f4f3ff]/40";
+const pill =
+  "group inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-white/[0.04] px-3.5 py-2 text-[0.8rem] md:px-4 md:py-2.5 md:text-[0.85rem] text-[#f4f3ff]/90 ring-1 ring-white/12 shadow-[inset_0_1px_0_rgb(255_255_255/0.10)] transition-[background-color,box-shadow,color] duration-300 hover:bg-white/[0.08] hover:text-white hover:ring-white/30";
 
 /**
  * Curtain-reveal footer: the page scrolls away and uncovers this panel underneath.
@@ -24,7 +32,7 @@ const label = "text-[0.7rem] font-medium uppercase tracking-[0.18em] text-[#f4f3
  * giant wordmark that turns to glass on hover. All motion is driven by one smoothed
  * scroll value, transform and opacity only.
  */
-export function SiteFooter({ content = footerContent, className }: SiteFooterProps) {
+export function SiteFooter({ content = footerContent, className, curveColor = "#030712" }: SiteFooterProps) {
   const ref = useRef<HTMLElement>(null);
   const reduce = useReducedMotionSafe();
 
@@ -33,7 +41,7 @@ export function SiteFooter({ content = footerContent, className }: SiteFooterPro
   const settled = useMotionValue(1);
   const p: MotionValue<number> = reduce ? settled : smooth;
 
-  const drift = useTransform(p, [0, 1], ["10vh", "0vh"]);
+  const drift = useTransform(p, [0, 1], ["14vh", "0vh"]);
   const fade = useTransform(p, [0, 0.6], [0.2, 1]);
 
   // Read the year after mount: `new Date()` during render blocks the prerender under
@@ -47,12 +55,13 @@ export function SiteFooter({ content = footerContent, className }: SiteFooterPro
       ref={ref}
       aria-label="Site footer"
       className={cn(
-        "relative h-(--footer-h) [--footer-h:clamp(640px,100svh,1000px)]",
+        "relative h-(--footer-h) [--footer-h:clamp(560px,100svh,1000px)]",
         "[clip-path:polygon(0_0,100%_0,100%_100%,0_100%)]",
         "[@media(max-height:599px)]:h-auto [@media(max-height:599px)]:[clip-path:none]",
         className,
       )}
     >
+      {!reduce && <FooterCurve progress={p} color={curveColor} />}
       <div data-footer-panel className="fixed inset-x-0 bottom-0 isolate flex h-(--footer-h) flex-col overflow-hidden bg-[#0a0b22] text-[#f4f3ff] [@media(max-height:599px)]:relative [@media(max-height:599px)]:h-auto">
         {/* Depth: shadow under the departing page, glows for the glass to refract */}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-40 bg-[linear-gradient(180deg,rgb(0_0_0/0.55),transparent)]" />
@@ -63,55 +72,47 @@ export function SiteFooter({ content = footerContent, className }: SiteFooterPro
         <motion.div
           data-footer-content
           style={{ y: drift, opacity: fade }}
-          className="flex flex-1 flex-col justify-end px-[clamp(0.75rem,2.5vw,2.5rem)] pt-[clamp(4.75rem,11svh,7rem)] font-footer-text will-change-transform"
+          className="flex flex-1 flex-col justify-end px-[clamp(0.75rem,2.5vw,2.5rem)] pt-[clamp(0.75rem,2.5svh,1.75rem)] font-footer-text will-change-transform"
         >
-          <GlassPanel spotlight={!reduce} className="px-[clamp(1.1rem,2.6vw,2.5rem)] pt-[clamp(1.2rem,3svh,2.1rem)] pb-[clamp(0.9rem,2svh,1.35rem)]">
+          <GlassPanel spotlight={!reduce} className="px-[clamp(1.1rem,2.6vw,2.5rem)] pt-[clamp(1.1rem,3svh,2rem)] pb-[clamp(0.8rem,1.8svh,1.2rem)]">
             {/* Upper: headline + contact | menu | studio */}
             <div className="grid grid-cols-2 gap-x-6 gap-y-6 md:grid-cols-12 md:gap-y-8">
               <div className="col-span-2 md:col-span-6 lg:col-span-7">
-                <p className={cn(label, "hidden md:block")}>( {content.eyebrow} )</p>
-                <h2 className="font-footer-display text-[clamp(1.85rem,3.6vw,3.4rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-balance text-[#f4f3ff] md:mt-3">
-                  {content.tagline.before}
-                  {content.tagline.highlight}
-                  {content.tagline.after}
-                </h2>
-
-                <div className="mt-[clamp(1rem,2.6svh,1.75rem)] flex flex-wrap items-end gap-x-10 gap-y-4">
-                  <div>
-                    <p className={label}>New business</p>
-                    <a href={`mailto:${content.email}`} className="group mt-1.5 inline-flex items-center gap-1.5 text-[clamp(1.05rem,1.5vw,1.35rem)] font-medium tracking-[-0.01em]">
-                      <span className="bg-[linear-gradient(currentColor,currentColor)] bg-[length:0%_1px] bg-[position:0_100%] bg-no-repeat transition-[background-size] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:bg-[length:100%_1px]">
-                        {content.email}
-                      </span>
-                      <ArrowUpRight aria-hidden className="size-4 opacity-50 transition-[translate,opacity] duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100" />
-                    </a>
-                  </div>
-                  <a
-                    href={content.whatsapp.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group inline-flex items-center gap-2.5 rounded-full bg-white/[0.04] py-2 pl-2 pr-4 text-[0.875rem] ring-1 ring-white/10 shadow-[inset_0_1px_0_rgb(255_255_255/0.12),0_8px_24px_-12px_rgb(0_0_0/0.9)] transition-[background-color,box-shadow,--tw-ring-color] duration-300 hover:bg-white/[0.07] hover:ring-[rgb(37_211_102/0.5)] hover:shadow-[inset_0_1px_0_rgb(255_255_255/0.16),0_10px_30px_-10px_rgb(37_211_102/0.45)]"
-                  >
-                    <span className="grid size-7 place-items-center rounded-full bg-[rgb(37_211_102/0.16)] text-[rgb(90_230_140)]">
-                      <SocialIcon name="whatsapp" className="size-3.5" />
-                    </span>
-                    {content.whatsapp.label}
-                  </a>
+                {/* Headline: two lines, with the small arrow pointing at the contact row */}
+                <div className="flex items-start justify-between gap-6">
+                  <h2 className="max-w-[9.5em] font-footer-display text-[clamp(2rem,4.1vw,4.25rem)] font-semibold leading-[1] tracking-[-0.04em] text-[#f4f3ff]">
+                    {content.tagline.before}
+                    {content.tagline.highlight}
+                    {content.tagline.after}
+                  </h2>
+                  <ArrowDownLeft aria-hidden className="mt-2 hidden size-[clamp(1.25rem,1.8vw,1.75rem)] shrink-0 text-[#f4f3ff]/60 md:block" strokeWidth={1.5} />
                 </div>
 
-                <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-[0.75rem] text-[#f4f3ff]/60 md:gap-x-6 md:text-[0.85rem]">
+                {/* Divider */}
+                <div className="mt-[clamp(1.75rem,5svh,3.25rem)] h-px bg-gradient-to-r from-white/20 via-white/15 to-white/0" />
+
+                {/* Contact pills */}
+                <div className="mt-[clamp(1.75rem,5svh,3.25rem)] flex flex-wrap gap-2 md:max-w-[calc(100%-clamp(8rem,13vw,12.5rem))] md:gap-2.5">
+                  <a href={`mailto:${content.email}`} className={pill}>
+                    <Mail aria-hidden className="size-3.5 text-[#f4f3ff]/60" />
+                    {content.email}
+                  </a>
+                  <a href={content.whatsapp.href} target="_blank" rel="noopener noreferrer" className={cn(pill, "hover:ring-[rgb(37_211_102/0.5)]")}>
+                    <SocialIcon name="whatsapp" className="size-3.5 text-[rgb(90_230_140)]" />
+                    {content.whatsapp.label}
+                  </a>
                   {content.phones.map((ph) => (
-                    <li key={ph.href}>
-                      <span className="text-[#f4f3ff]/35">{ph.label}</span>{" "}
-                      <a href={ph.href} className="tabular-nums transition-colors hover:text-[#f4f3ff]">{ph.display}</a>
-                    </li>
+                    <a key={ph.href} href={ph.href} className={pill}>
+                      <span className="text-[#f4f3ff]/45">{ph.label}</span>
+                      <span className="tabular-nums">{ph.display}</span>
+                    </a>
                   ))}
-                </ul>
+                </div>
               </div>
 
               <nav aria-label="Footer" className="md:col-span-2 md:col-start-8 md:pt-1 lg:col-start-9">
                 <p className={label}>Menu</p>
-                <ul className="mt-3 space-y-1 text-[0.95rem] text-[#f4f3ff]/80">
+                <ul className="mt-3 space-y-0.5 text-[0.95rem] text-[#f4f3ff]/80">
                   {content.nav.map((l) => (
                     <li key={l.label}>
                       <RollLink href={l.href} className="hover:text-[#f4f3ff]">{l.label}</RollLink>
@@ -138,7 +139,7 @@ export function SiteFooter({ content = footerContent, className }: SiteFooterPro
             </div>
 
             {/* Hairline divider */}
-            <div aria-hidden className="mt-[clamp(1rem,2.6svh,1.75rem)] h-px bg-gradient-to-r from-white/0 via-white/15 to-white/0" />
+            <div aria-hidden className="mt-[clamp(1.1rem,3svh,2rem)] h-px bg-gradient-to-r from-white/0 via-white/12 to-white/0" />
 
             {/* Lower: socials | copyright | back to top */}
             <div className="mt-[clamp(0.8rem,1.8svh,1.2rem)] flex flex-wrap items-center justify-between gap-x-6 gap-y-4">

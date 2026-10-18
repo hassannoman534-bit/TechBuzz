@@ -35,11 +35,12 @@ export default function Navbar() {
   useEffect(() => setMounted(true), []);
   const navRef        = useRef<HTMLDivElement>(null);
 
-  /* Scroll listener */
+  /* Scroll listener — initialised on mount so the first frame already has the right state */
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const update = () => setScrolled(window.scrollY > 24);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
   }, []);
 
   /* Lock body scroll when mobile drawer is open */
@@ -130,9 +131,8 @@ export default function Navbar() {
 
               {/* Desktop nav links */}
               <nav
-                className="hidden md:flex"
+                className="hidden lg:flex"
                 style={{
-                  display:    "flex",
                   alignItems: "center",
                   gap:        "2px",
                   position:   "relative",
@@ -208,9 +208,9 @@ export default function Navbar() {
                   Book a Call
                 </GlassButton>
 
-                {/* Hamburger — mobile only */}
+                {/* Hamburger — shown until the links fit (below lg) */}
                 <motion.button
-                  className="flex md:hidden"
+                  className="flex lg:hidden"
                   whileTap={{ scale: 0.90 }}
                   onClick={() => setMobileOpen((v) => !v)}
                   style={{
@@ -220,7 +220,6 @@ export default function Navbar() {
                     padding:     "6px",
                     color:       "rgba(255,255,255,0.75)",
                     lineHeight:   1,
-                    display:     "flex",
                     alignItems:  "center",
                     justifyContent: "center",
                   }}

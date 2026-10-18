@@ -13,16 +13,13 @@ type FooterWordmarkProps = {
 
 const LINE = 0.82; // line-height (em)
 const PAD = 0.05; // bottom padding inside each letter mask (em)
-/** Vertical stretch limits. Width is always edge to edge; height stretches into the free space. */
-const STRETCH_MIN = 0.8;
-const STRETCH_MAX = 1.5;
 
 /**
  * Giant lowercase wordmark.
  * - Width: the visible ink runs exactly from the left edge to the right edge (side bearings of
  *   the first and last glyph are measured and trimmed, so there is no optical gap).
- * - Height: the word is stretched vertically (scaleY, origin bottom) to fill the space left under
- *   the glass card, and the layout reserves that space so nothing overlaps.
+ * - Height: never taller than the space left under the glass card. If the screen is short, the
+ *   word shrinks (and centres) instead of pushing the footer past one screen.
  * - Letters rise out of a mask on reveal; hovering crossfades the word into glass (opacity only).
  */
 export function FooterWordmark({ text, progress, range = [0.3, 0.92] }: FooterWordmarkProps) {
@@ -63,21 +60,20 @@ export function FooterWordmark({ text, progress, range = [0.3, 0.92] }: FooterWo
         tail = lastBox - end.actualBoundingBoxRight; // may be negative (ink past the box)
       }
       const ink = natural - lead - tail;
-      const size = (100 * availW) / ink;
-      const k = size / 100;
-      el.style.fontSize = `${size}px`;
-      el.style.marginLeft = `${-lead * k}px`;
+      let size = (100 * availW) / ink;
 
-      // 2. Stretch vertically into the space under the card.
+      // Never taller than the space under the card: if it would be, shrink it (no squashing)
+      // and centre it. On most screens it still runs edge to edge.
       if (host && content) {
         const card = content.firstElementChild as HTMLElement | null;
         const used = parseFloat(getComputedStyle(content).paddingTop) + (card?.offsetHeight ?? 0);
         const availH = host.clientHeight - used - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-        const h = size * (LINE + PAD);
-        const s = Math.min(STRETCH_MAX, Math.max(STRETCH_MIN, availH / h));
-        el.style.transform = `scaleY(${s.toFixed(4)})`;
-        el.style.marginTop = `${(s - 1) * h}px`; // reserve (or release) the stretched height in layout
+        size = Math.max(40, Math.min(size, availH / (LINE + PAD)));
       }
+      const k = size / 100;
+      el.style.fontSize = `${size}px`;
+      const spare = Math.max(0, availW - ink * k);
+      el.style.marginLeft = `${spare / 2 - lead * k}px`;
     };
 
     fit();

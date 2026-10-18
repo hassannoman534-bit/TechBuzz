@@ -15,6 +15,8 @@ export type FooterContent = {
   socials: FooterSocial[];
   copyright: { since: number; name: string; suffix: string };
   wordmark: string;
+  /** The big round button on the divider */
+  cta: { label: string; href: string };
 };
 
 export const footerContent: FooterContent = {
@@ -51,4 +53,5 @@ export const footerContent: FooterContent = {
   ],
   copyright: { since: 2019, name: "TechBuzz", suffix: "All rights reserved." },
   wordmark: "techbuzz",
+  cta: { label: "Get in touch", href: "/contact" },
 };
