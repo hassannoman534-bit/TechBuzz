@@ -39,12 +39,12 @@ function useFinePointer(): boolean {
 /** Phones: a small static version of the stack under the title (no hover on touch). */
 function MiniStack({ item }: { item: WorkListItem }) {
   const slots = [
-    { i: 1, cls: "-translate-y-[22%] -translate-x-[4%] -rotate-[7deg] z-[2]" },
-    { i: 2, cls: "translate-y-[22%] translate-x-[4%] rotate-[7deg] z-[1]" },
+    { i: 1, cls: "-translate-y-[45%] -translate-x-[3%] rotate-[6deg] z-[2]" },
+    { i: 2, cls: "translate-y-[45%] translate-x-[3%] -rotate-[6deg] z-[1]" },
     { i: 0, cls: "z-[3]" },
   ];
   return (
-    <div aria-hidden className="relative mx-auto mb-10 mt-14 aspect-[4/3] w-[68%] md:hidden">
+    <div aria-hidden className="relative mx-auto mb-14 mt-16 aspect-[4/3] w-[56%] md:hidden">
       {slots.map(({ i, cls }) => {
         const img = item.images?.[i];
         return (
@@ -153,18 +153,18 @@ export function WorkList({ content = workList, className, hideHeading = false }:
                 // staircase: each row steps a little further right
                 style={{ ["--step" as string]: i }}
                 className={cn(
-                  "group relative block py-[clamp(0.9rem,2.2vw,1.6rem)] outline-none md:pl-[calc(var(--step)*clamp(1.25rem,3.6vw,3.75rem))]",
+                  "group relative block py-[clamp(0.7rem,1.5vw,1.15rem)] outline-none md:pl-[calc(var(--step)*clamp(1rem,2.6vw,2.75rem))]",
                   "transition-opacity duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]",
                   dim && "opacity-30",
                   "focus-visible:opacity-100",
                 )}
               >
-                <span className="flex items-center gap-[clamp(0.9rem,2vw,1.75rem)]">
+                <span className="flex items-center gap-[clamp(0.75rem,1.5vw,1.35rem)]">
                   {/* number marker: fills with the brand gradient on hover */}
                   <span
                     aria-hidden
                     className={cn(
-                      "relative grid size-[clamp(1.6rem,2.2vw,2.1rem)] shrink-0 place-items-center overflow-hidden rounded-full text-[clamp(0.65rem,0.8vw,0.8rem)] font-medium tabular-nums ring-1 transition-[color,box-shadow] duration-700",
+                      "relative grid size-[clamp(1.4rem,1.7vw,1.75rem)] shrink-0 place-items-center overflow-hidden rounded-full text-[clamp(0.65rem,0.8vw,0.8rem)] font-medium tabular-nums ring-1 transition-[color,box-shadow] duration-700",
                       isOn ? "text-white ring-transparent" : "text-white/55 ring-white/25",
                     )}
                   >
@@ -179,9 +179,9 @@ export function WorkList({ content = workList, className, hideHeading = false }:
 
                   <span
                     className={cn(
-                      "font-footer-display text-[clamp(2rem,5.4vw,5.5rem)] font-medium leading-[1.05] tracking-[-0.035em] text-white",
+                      "font-footer-display text-[clamp(1.6rem,3.6vw,3.75rem)] font-medium leading-[1.1] tracking-[-0.035em] text-white",
                       "transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
-                      isOn && "md:translate-x-[clamp(0.75rem,1.6vw,1.5rem)]",
+                      isOn && "md:translate-x-[clamp(0.6rem,1.2vw,1.1rem)]",
                     )}
                   >
                     {item.title}
@@ -191,9 +191,9 @@ export function WorkList({ content = workList, className, hideHeading = false }:
 
                 <span
                   className={cn(
-                    "mt-1 block pl-[calc(clamp(1.6rem,2.2vw,2.1rem)+clamp(0.9rem,2vw,1.75rem))] text-[0.9rem] text-white/45 transition-[opacity,transform] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
+                    "mt-1 block pl-[calc(clamp(1.4rem,1.7vw,1.75rem)+clamp(0.75rem,1.5vw,1.35rem))] text-[0.85rem] text-white/45 transition-[opacity,transform] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
                     "md:opacity-0 md:translate-y-1",
-                    isOn && "md:translate-x-[clamp(0.75rem,1.6vw,1.5rem)] md:translate-y-0 md:opacity-100",
+                    isOn && "md:translate-x-[clamp(0.6rem,1.2vw,1.1rem)] md:translate-y-0 md:opacity-100",
                   )}
                 >
                   {item.services}
