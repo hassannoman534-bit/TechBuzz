@@ -9,6 +9,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import LiquidGlassCard from "@/components/ui/LiquidGlassCard";
 import { GlassButton } from "@/components/ui/GlassButton";
+import { MetalButton } from "@/components/ui/MetalButton";
+import { USE_METAL_BUTTONS } from "@/lib/feature-flags";
 
 /* ─── Nav data ───────────────────────────────────────────────────────────── */
 
@@ -203,10 +205,16 @@ export default function Navbar() {
 
               {/* Right — CTA + hamburger */}
               <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", flexShrink: 0 }}>
-                {/* CTA — glass button */}
-                <GlassButton href="/contact" variant="primary" size="md">
-                  Book a Call
-                </GlassButton>
+                {/* CTA — glass button (or metal when the flag is on) */}
+                {USE_METAL_BUTTONS ? (
+                  <MetalButton href="/contact" size="md" preset="chromatic">
+                    Book a Call
+                  </MetalButton>
+                ) : (
+                  <GlassButton href="/contact" variant="primary" size="md">
+                    Book a Call
+                  </GlassButton>
+                )}
 
                 {/* Hamburger — shown until the links fit (below lg) */}
                 <motion.button

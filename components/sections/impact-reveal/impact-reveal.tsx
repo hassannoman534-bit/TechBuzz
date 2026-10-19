@@ -2,6 +2,8 @@
 
 import { useLayoutEffect, useRef } from "react";
 import { GlassButton } from "@/components/ui/GlassButton";
+import { MetalButton } from "@/components/ui/MetalButton";
+import { USE_METAL_BUTTONS } from "@/lib/feature-flags";
 import {
   motion,
   useMotionValue,
@@ -207,9 +209,16 @@ export function ImpactReveal({ content = impactRevealContent, length = 520, clas
           </h2>
           <p className="mt-6 max-w-[46ch] font-signature text-[clamp(1rem,1.3vw,1.2rem)] leading-relaxed text-ink-muted">{cta.body}</p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <GlassButton href={cta.primary.href} variant="glow" size="lg" trailingIcon={<span aria-hidden>→</span>}>
-              {cta.primary.label}
-            </GlassButton>
+            {USE_METAL_BUTTONS ? (
+              <MetalButton href={cta.primary.href} size="lg" preset="silver" className="self-center">
+                {cta.primary.label}
+                <span aria-hidden>→</span>
+              </MetalButton>
+            ) : (
+              <GlassButton href={cta.primary.href} variant="glow" size="lg" trailingIcon={<span aria-hidden>→</span>}>
+                {cta.primary.label}
+              </GlassButton>
+            )}
             {cta.secondary && (
               <GlassButton href={cta.secondary.href} variant="outline" size="lg">
                 {cta.secondary.label}

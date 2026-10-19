@@ -10,7 +10,12 @@ import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
 import { HoverPreview } from "./hover-preview";
 import { workList, type WorkListContent } from "./work-list.config";
 
-type WorkListProps = { content?: WorkListContent; className?: string };
+type WorkListProps = {
+  content?: WorkListContent;
+  className?: string;
+  /** Hide the big centred heading (e.g. when a page hero right above already has one) */
+  hideHeading?: boolean;
+};
 
 /** Box trails the pointer; the cursor is quicker, so they separate in motion and meet at rest */
 const BOX_SPRING = { stiffness: 150, damping: 20, mass: 0.5 };
@@ -37,7 +42,7 @@ function useFinePointer(): boolean {
  * The hovered row fades and its text eases apart. On touch screens each row shows its
  * image inline instead, so nothing depends on hover.
  */
-export function WorkList({ content = workList, className }: WorkListProps) {
+export function WorkList({ content = workList, className, hideHeading = false }: WorkListProps) {
   const reduce = useReducedMotionSafe();
   const fine = useFinePointer();
   const hoverMode = fine && !reduce;
@@ -68,24 +73,38 @@ export function WorkList({ content = workList, className }: WorkListProps) {
     <section
       id="work"
       aria-labelledby="work-list-heading"
-      className={cn("relative bg-[#030712] px-[clamp(1.25rem,6vw,8rem)] pb-[clamp(5rem,12vh,9rem)] pt-[clamp(5rem,12vh,9rem)] text-white", className)}
+      className={cn("relative bg-[#030712] px-[clamp(1.25rem,6vw,8rem)] pb-[clamp(5rem,12vh,9rem)] text-white", hideHeading ? "pt-4" : "pt-[clamp(5rem,12vh,9rem)]", className)}
     >
-      <h2
-        id="work-list-heading"
-        className="mb-[clamp(3rem,8vh,6rem)] overflow-hidden pb-[0.08em] text-center font-footer-display text-[clamp(3rem,8.5vw,8.5rem)] font-bold leading-[0.9] tracking-[-0.045em]"
-      >
-        <motion.span
-          className="inline-block"
-          initial={reduce ? false : { y: "105%" }}
-          whileInView={{ y: "0%" }}
-          viewport={{ once: true, margin: "0px 0px -10% 0px" }}
-          transition={{ duration: 1.1, ease: EASE }}
-        >
+      {hideHeading ? (
+        <h2 id="work-list-heading" className="sr-only">
           {content.heading}
-        </motion.span>
-      </h2>
+        </h2>
+      ) : (
+        <h2
+          id="work-list-heading"
+          className="mb-[clamp(3rem,8vh,6rem)] overflow-hidden pb-[0.08em] text-center font-footer-display text-[clamp(3rem,8.5vw,8.5rem)] font-bold leading-[0.9] tracking-[-0.045em]"
+        >
+          <motion.span
+            className="inline-block"
+            initial={reduce ? false : { y: "105%" }}
+            whileInView={{ y: "0%" }}
+            viewport={{ once: true, margin: "0px 0px -10% 0px" }}
+            transition={{ duration: 1.1, ease: EASE }}
+          >
+            {content.heading}
+          </motion.span>
+        </h2>
+      )}
 
-      <p className="mb-6 pl-[clamp(0rem,4vw,4rem)] text-[0.7rem] font-medium uppercase tracking-[0.18em] text-white/40">{content.label}</p>
+      <motion.p
+        className="mb-6 pl-[clamp(0rem,4vw,4rem)] text-[0.7rem] font-medium uppercase tracking-[0.18em] text-white/40"
+        initial={reduce ? false : { opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8, ease: EASE, delay: hideHeading ? 0.65 : 0 }}
+      >
+        {content.label}
+      </motion.p>
 
       <ul
         onPointerEnter={onEnterList}
@@ -94,7 +113,14 @@ export function WorkList({ content = workList, className }: WorkListProps) {
         className="border-b border-white/10"
       >
         {content.items.map((item, i) => (
-          <li key={item.title} className="border-t border-white/10">
+          <motion.li
+            key={item.title}
+            className="border-t border-white/10"
+            initial={reduce ? false : { opacity: 0, y: 48 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "0px 0px -8% 0px" }}
+            transition={{ duration: 1, ease: EASE, delay: (hideHeading ? 0.75 : 0) + i * 0.09 }}
+          >
             <Link
               href={item.href}
               onPointerEnter={() => {
@@ -124,7 +150,7 @@ export function WorkList({ content = workList, className }: WorkListProps) {
                 <ArrowUpRight aria-hidden className="size-4 md:hidden" />
               </p>
             </Link>
-          </li>
+          </motion.li>
         ))}
       </ul>
 

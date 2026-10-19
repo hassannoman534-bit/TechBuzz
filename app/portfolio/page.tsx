@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PortfolioIntro } from "@/components/sections/portfolio-intro/portfolio-intro";
+import { PortfolioHero } from "@/components/sections/portfolio-hero/portfolio-hero";
 import { WorkList } from "@/components/sections/work-list/work-list";
 import { SiteFooter } from "@/components/sections/site-footer/site-footer";
 
@@ -11,8 +11,8 @@ export const metadata: Metadata = {
 export default function PortfolioPage() {
   return (
     <main className="bg-[#030712]">
-      <PortfolioIntro />
-      <WorkList />
+      <PortfolioHero />
+      <WorkList hideHeading />
       <SiteFooter />
     </main>
   );

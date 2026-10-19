@@ -2,6 +2,8 @@
 
 import { motion, type Variants } from "framer-motion";
 import { GlassButton } from "@/components/ui/GlassButton";
+import { MetalButton } from "@/components/ui/MetalButton";
+import { USE_METAL_BUTTONS } from "@/lib/feature-flags";
 
 /* ─── Animation variants ─────────────────────────────────────────────────── */
 
@@ -142,9 +144,15 @@ export default function Hero() {
 
         {/* CTA buttons */}
         <motion.div variants={fadeIn} className="flex gap-4 flex-wrap justify-center">
-          <GlassButton href="/contact" variant="glow" size="lg" data-cursor="magnetic">
-            Start a Project
-          </GlassButton>
+          {USE_METAL_BUTTONS ? (
+            <MetalButton href="/contact" size="lg" preset="chromatic" className="self-center" data-cursor="magnetic">
+              Start a Project
+            </MetalButton>
+          ) : (
+            <GlassButton href="/contact" variant="glow" size="lg" data-cursor="magnetic">
+              Start a Project
+            </GlassButton>
+          )}
           <GlassButton href="/portfolio" variant="secondary" size="lg" data-cursor="magnetic">
             View Our Work
           </GlassButton>
