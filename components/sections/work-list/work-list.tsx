@@ -3,12 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, type PointerEvent } from "react";
-import { motion, useMotionValue, useSpring } from "framer-motion";
+import { motion, useMotionValue, useScroll, useSpring, useVelocity } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
-import { HoverPreview } from "./hover-preview";
-import { workList, type WorkListContent } from "./work-list.config";
+import { WorkStack } from "./work-stack";
+import { workList, type WorkListContent, type WorkListItem } from "./work-list.config";
 
 type WorkListProps = {
   content?: WorkListContent;
@@ -17,10 +17,11 @@ type WorkListProps = {
   hideHeading?: boolean;
 };
 
-/** Box trails the pointer; the cursor is quicker, so they separate in motion and meet at rest */
-const BOX_SPRING = { stiffness: 150, damping: 20, mass: 0.5 };
-const CURSOR_SPRING = { stiffness: 320, damping: 26, mass: 0.4 };
 const EASE = [0.22, 1, 0.36, 1] as const;
+/** Soft follow: the stack glides to the hovered row instead of snapping. */
+const FOLLOW = { stiffness: 110, damping: 22, mass: 0.8 };
+/** Scroll velocity for the fan-out, smoothed so it opens and settles gently. */
+const FAN = { stiffness: 120, damping: 26, mass: 0.6 };
 
 /** Desktop pointers only. Read after mount, so the server and client HTML always match. */
 function useFinePointer(): boolean {
@@ -35,12 +36,37 @@ function useFinePointer(): boolean {
   return fine;
 }
 
+/** Phones: a small static version of the stack under the title (no hover on touch). */
+function MiniStack({ item }: { item: WorkListItem }) {
+  const slots = [
+    { i: 1, cls: "-translate-y-[22%] -translate-x-[4%] -rotate-[7deg] z-[2]" },
+    { i: 2, cls: "translate-y-[22%] translate-x-[4%] rotate-[7deg] z-[1]" },
+    { i: 0, cls: "z-[3]" },
+  ];
+  return (
+    <div aria-hidden className="relative mx-auto mb-10 mt-14 aspect-[4/3] w-[68%] md:hidden">
+      {slots.map(({ i, cls }) => {
+        const img = item.images?.[i];
+        return (
+          <div key={i} className={cn("absolute inset-0 overflow-hidden rounded-xl shadow-[0_20px_50px_-20px_rgb(0_0_0/0.9),0_0_0_1px_rgb(255_255_255/0.08)]", cls)} style={{ backgroundColor: item.color }}>
+            {img ? (
+              <Image src={img.src} alt="" fill sizes="70vw" className="object-cover" />
+            ) : (
+              <div className="absolute inset-0 bg-[radial-gradient(80%_70%_at_35%_30%,rgb(255_255_255/0.16),transparent_70%)]" />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /**
- * Hover-reveal project list (after the "Recent work" list on dennissnellenberg.com).
- * Big project names in full-width rows. On desktop, hovering a row opens a floating preview
- * that follows the pointer and slides between projects, with a round "View" cursor on top.
- * The hovered row fades and its text eases apart. On touch screens each row shows its
- * image inline instead, so nothing depends on hover.
+ * Recent work as a staircase list: big titles stepping to the right, each with a numbered
+ * marker. Hovering a row slides a stack of three overlapping cards in from the right
+ * (centre card in front, one behind tilted up, one behind tilted down). The stack glides to
+ * follow the hovered row, its images slide to that project, and scrolling fans the back cards
+ * apart before they settle. Every motion is slow and eased; transform and opacity only.
  */
 export function WorkList({ content = workList, className, hideHeading = false }: WorkListProps) {
   const reduce = useReducedMotionSafe();
@@ -50,30 +76,32 @@ export function WorkList({ content = workList, className, hideHeading = false }:
   const [index, setIndex] = useState(0);
   const [active, setActive] = useState(false);
 
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const boxX = useSpring(x, BOX_SPRING);
-  const boxY = useSpring(y, BOX_SPRING);
-  const cursorX = useSpring(x, CURSOR_SPRING);
-  const cursorY = useSpring(y, CURSOR_SPRING);
+  const target = useMotionValue(0);
+  const stackY = useSpring(target, FOLLOW);
+  const { scrollY } = useScroll();
+  const velocity = useSpring(useVelocity(scrollY), FAN);
 
-  const onMove = (e: PointerEvent<HTMLUListElement>): void => {
+  const rowCenter = (el: HTMLElement): number => el.offsetTop + el.offsetHeight / 2;
+
+  const onRowEnter = (i: number, e: PointerEvent<HTMLAnchorElement>): void => {
     if (!hoverMode) return;
-    x.set(e.clientX);
-    y.set(e.clientY);
-  };
-  // Jump (no spring) to the entry point, so the preview never flies in from the corner.
-  const onEnterList = (e: PointerEvent<HTMLUListElement>): void => {
-    if (!hoverMode) return;
-    [x, boxX, cursorX].forEach((m) => m.jump(e.clientX));
-    [y, boxY, cursorY].forEach((m) => m.jump(e.clientY));
+    const li = e.currentTarget.parentElement as HTMLElement;
+    // First entry: place the stack at the row immediately, then let it glide from there.
+    if (!active) stackY.jump(rowCenter(li));
+    target.set(rowCenter(li));
+    setIndex(i);
+    setActive(true);
   };
 
   return (
     <section
       id="work"
       aria-labelledby="work-list-heading"
-      className={cn("relative bg-[#030712] px-[clamp(1.25rem,6vw,8rem)] pb-[clamp(5rem,12vh,9rem)] text-white", hideHeading ? "pt-4" : "pt-[clamp(5rem,12vh,9rem)]", className)}
+      className={cn(
+        "relative overflow-x-clip bg-[#030712] px-[clamp(1.25rem,6vw,8rem)] pb-[clamp(5rem,12vh,9rem)] text-white",
+        hideHeading ? "pt-4" : "pt-[clamp(5rem,12vh,9rem)]",
+        className,
+      )}
     >
       {hideHeading ? (
         <h2 id="work-list-heading" className="sr-only">
@@ -97,61 +125,87 @@ export function WorkList({ content = workList, className, hideHeading = false }:
       )}
 
       <motion.p
-        className="mb-6 pl-[clamp(0rem,4vw,4rem)] text-[0.7rem] font-medium uppercase tracking-[0.18em] text-white/40"
+        className="mb-[clamp(1.5rem,4vh,3rem)] text-[0.7rem] font-medium uppercase tracking-[0.18em] text-white/40"
         initial={reduce ? false : { opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
-        transition={{ duration: 0.8, ease: EASE, delay: hideHeading ? 0.65 : 0 }}
+        transition={{ duration: 0.9, ease: EASE, delay: hideHeading ? 0.65 : 0 }}
       >
         {content.label}
       </motion.p>
 
-      <ul
-        onPointerEnter={onEnterList}
-        onPointerMove={onMove}
-        onPointerLeave={() => setActive(false)}
-        className="border-b border-white/10"
-      >
-        {content.items.map((item, i) => (
-          <motion.li
-            key={item.title}
-            className="border-t border-white/10"
-            initial={reduce ? false : { opacity: 0, y: 48 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "0px 0px -8% 0px" }}
-            transition={{ duration: 1, ease: EASE, delay: (hideHeading ? 0.75 : 0) + i * 0.09 }}
-          >
-            <Link
-              href={item.href}
-              onPointerEnter={() => {
-                if (!hoverMode) return;
-                setIndex(i);
-                setActive(true);
-              }}
-              onFocus={() => setIndex(i)}
-              className="group relative flex flex-col gap-4 py-[clamp(1.75rem,4.5vw,3.75rem)] outline-none focus-visible:bg-white/[0.03] md:flex-row md:items-center md:justify-between md:px-[clamp(1rem,4vw,4rem)]"
+      <ul onPointerLeave={() => setActive(false)} className="relative">
+        {content.items.map((item, i) => {
+          const isOn = active && index === i;
+          const dim = active && index !== i;
+          return (
+            <motion.li
+              key={item.title}
+              initial={reduce ? false : { opacity: 0, y: 56 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "0px 0px -8% 0px" }}
+              transition={{ duration: 1.1, ease: EASE, delay: (hideHeading ? 0.75 : 0) + i * 0.1 }}
             >
-              {/* Touch screens: image inline (no hover there) */}
-              {!hoverMode && (
-                <div className="relative aspect-[16/10] w-full overflow-hidden rounded-xl md:hidden" style={{ backgroundColor: item.color }}>
-                  {item.image ? (
-                    <Image src={item.image.src} alt={item.image.alt} fill sizes="100vw" className="object-cover" />
-                  ) : (
-                    <div aria-hidden className="absolute inset-0 bg-[radial-gradient(70%_70%_at_30%_25%,rgb(255_255_255/0.12),transparent_70%)]" />
-                  )}
-                </div>
-              )}
+              <Link
+                href={item.href}
+                onPointerEnter={(e) => onRowEnter(i, e)}
+                onFocus={() => setIndex(i)}
+                // staircase: each row steps a little further right
+                style={{ ["--step" as string]: i }}
+                className={cn(
+                  "group relative block py-[clamp(0.9rem,2.2vw,1.6rem)] outline-none md:pl-[calc(var(--step)*clamp(1.25rem,3.6vw,3.75rem))]",
+                  "transition-opacity duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                  dim && "opacity-30",
+                  "focus-visible:opacity-100",
+                )}
+              >
+                <span className="flex items-center gap-[clamp(0.9rem,2vw,1.75rem)]">
+                  {/* number marker: fills with the brand gradient on hover */}
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "relative grid size-[clamp(1.6rem,2.2vw,2.1rem)] shrink-0 place-items-center overflow-hidden rounded-full text-[clamp(0.65rem,0.8vw,0.8rem)] font-medium tabular-nums ring-1 transition-[color,box-shadow] duration-700",
+                      isOn ? "text-white ring-transparent" : "text-white/55 ring-white/25",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "absolute inset-0 rounded-full bg-[linear-gradient(140deg,#7b61ff,#5b7cff_60%,#22a8ff)] transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                        isOn ? "scale-100" : "scale-0",
+                      )}
+                    />
+                    <span className="relative">{i + 1}</span>
+                  </span>
 
-              <h3 className="font-footer-display text-[clamp(2.25rem,6.2vw,6rem)] font-medium leading-[1] tracking-[-0.035em] text-white transition-[translate,opacity] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:group-hover:-translate-x-3 md:group-hover:opacity-40">
-                {item.title}
-              </h3>
-              <p className="flex items-center gap-2 text-[0.95rem] text-white/70 transition-[translate,opacity] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:text-[1.05rem] md:group-hover:translate-x-3 md:group-hover:opacity-40">
-                {item.services}
-                <ArrowUpRight aria-hidden className="size-4 md:hidden" />
-              </p>
-            </Link>
-          </motion.li>
-        ))}
+                  <span
+                    className={cn(
+                      "font-footer-display text-[clamp(2rem,5.4vw,5.5rem)] font-medium leading-[1.05] tracking-[-0.035em] text-white",
+                      "transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
+                      isOn && "md:translate-x-[clamp(0.75rem,1.6vw,1.5rem)]",
+                    )}
+                  >
+                    {item.title}
+                  </span>
+                  <ArrowUpRight aria-hidden className="size-5 shrink-0 text-white/50 md:hidden" />
+                </span>
+
+                <span
+                  className={cn(
+                    "mt-1 block pl-[calc(clamp(1.6rem,2.2vw,2.1rem)+clamp(0.9rem,2vw,1.75rem))] text-[0.9rem] text-white/45 transition-[opacity,transform] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
+                    "md:opacity-0 md:translate-y-1",
+                    isOn && "md:translate-x-[clamp(0.75rem,1.6vw,1.5rem)] md:translate-y-0 md:opacity-100",
+                  )}
+                >
+                  {item.services}
+                </span>
+
+                {!hoverMode && <MiniStack item={item} />}
+              </Link>
+            </motion.li>
+          );
+        })}
+
+        {hoverMode && <WorkStack items={content.items} index={index} active={active} y={stackY} velocity={velocity} />}
       </ul>
 
       {content.more && (
@@ -165,19 +219,6 @@ export function WorkList({ content = workList, className, hideHeading = false }:
             <sup aria-hidden className="text-[0.65rem]">{content.items.length}</sup>
           </Link>
         </div>
-      )}
-
-      {hoverMode && (
-        <HoverPreview
-          items={content.items}
-          index={index}
-          active={active}
-          boxX={boxX}
-          boxY={boxY}
-          cursorX={cursorX}
-          cursorY={cursorY}
-          cursorLabel={content.cursorLabel}
-        />
       )}
     </section>
   );
