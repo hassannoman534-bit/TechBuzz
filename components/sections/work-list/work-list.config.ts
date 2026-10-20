@@ -13,8 +13,8 @@ export type WorkListItem = {
   color: string;
   /**
    * Up to 3 images for the hover stack, in this order:
-   * [0] centre card (front), [1] top card (behind, tilted up), [2] bottom card (behind, tilted down).
-   * Missing ones show a tinted placeholder. Use the same aspect ratio for all (4:3 works best).
+   * [0] front card (straight), [1] top card (behind, up and right), [2] bottom card (behind, down and right).
+   * Missing ones show a tinted placeholder. Cards are square: use 1:1 images (1200 × 1200 works well).
    */
   images?: WorkListImage[];
 };

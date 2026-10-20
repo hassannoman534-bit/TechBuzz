@@ -15,11 +15,11 @@ type WorkStackProps = {
   velocity: MotionValue<number>;
 };
 
-/** Card layout, from the blueprint: centre in front and straight, top and bottom behind and tilted. */
+/** Card layout (fanned like a hand of cards): front card straight on top; the two back cards fan out to the right, one up and tilted clockwise, one down and tilted anticlockwise. */
 const CARDS = [
-  { slot: 0, z: 3, y: "0%", x: "0%", rotate: 0, delay: 0 }, // centre (front, main)
-  { slot: 1, z: 2, y: "-62%", x: "-3%", rotate: 6, delay: 0.1 }, // top (behind, peeking out above)
-  { slot: 2, z: 1, y: "62%", x: "3%", rotate: -6, delay: 0.18 }, // bottom (behind, peeking out below)
+  { slot: 0, z: 3, y: "0%", x: "0%", rotate: 0, delay: 0 }, // front (straight, on top)
+  { slot: 1, z: 1, y: "-46%", x: "42%", rotate: 24, delay: 0.12 }, // top (behind, up and right, tilted clockwise)
+  { slot: 2, z: 2, y: "40%", x: "42%", rotate: -22, delay: 0.2 }, // bottom (behind, down and right, tilted anticlockwise)
 ] as const;
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -34,10 +34,10 @@ const V_MAX = 2400;
  */
 export function WorkStack({ items, index, active, y, velocity }: WorkStackProps) {
   const spread = useTransform(velocity, (v) => Math.max(-1, Math.min(1, v / V_MAX)));
-  const topY = useTransform(spread, (s) => `${-Math.abs(s) * 10}%`);
-  const topRot = useTransform(spread, (s) => Math.abs(s) * 3);
-  const bottomY = useTransform(spread, (s) => `${Math.abs(s) * 10}%`);
-  const bottomRot = useTransform(spread, (s) => -Math.abs(s) * 3);
+  const topY = useTransform(spread, (s) => `${-Math.abs(s) * 9}%`);
+  const topRot = useTransform(spread, (s) => Math.abs(s) * 5);
+  const bottomY = useTransform(spread, (s) => `${Math.abs(s) * 9}%`);
+  const bottomRot = useTransform(spread, (s) => -Math.abs(s) * 5);
   const scrollFan = [
     { y: undefined, rotate: undefined },
     { y: topY, rotate: topRot },
@@ -48,7 +48,7 @@ export function WorkStack({ items, index, active, y, velocity }: WorkStackProps)
     <motion.div
       aria-hidden
       style={{ y, translateY: "-50%", willChange: "transform" }}
-      className="pointer-events-none absolute right-[clamp(2rem,9vw,10rem)] top-0 z-20 hidden aspect-[4/3] w-[clamp(11rem,15vw,17rem)] md:block"
+      className="pointer-events-none absolute right-[clamp(5rem,17vw,19rem)] top-0 z-20 hidden aspect-square w-[clamp(9.5rem,12.5vw,14rem)] md:block"
     >
       {CARDS.map((card) => (
         <motion.div
@@ -69,7 +69,7 @@ export function WorkStack({ items, index, active, y, velocity }: WorkStackProps)
         >
           {/* scroll fan: an extra layer so it adds to the hover position instead of replacing it */}
           <motion.div className="size-full" style={{ y: scrollFan[card.slot].y, rotate: scrollFan[card.slot].rotate }}>
-            <div className="relative size-full overflow-hidden rounded-[10px] bg-[#0b0d1d] shadow-[0_30px_70px_-25px_rgb(0_0_0/0.95),0_0_0_1px_rgb(255_255_255/0.08)]">
+            <div className="relative size-full overflow-hidden rounded-[18px] bg-[#0b0d1d] shadow-[0_30px_70px_-25px_rgb(0_0_0/0.95),0_0_0_1px_rgb(255_255_255/0.08)]">
               <div
                 className="absolute inset-x-0 top-0 h-full transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
                 style={{ transform: `translateY(${-index * 100}%)`, transitionDelay: `${card.delay * 0.6}s` }}
@@ -79,7 +79,7 @@ export function WorkStack({ items, index, active, y, velocity }: WorkStackProps)
                   return (
                     <div key={item.title} className="relative h-full w-full" style={{ backgroundColor: item.color }}>
                       {img ? (
-                        <Image src={img.src} alt="" fill sizes="17vw" className="object-cover" />
+                        <Image src={img.src} alt="" fill sizes="14vw" className="object-cover" />
                       ) : (
                         <div
                           className="grid size-full place-items-center"

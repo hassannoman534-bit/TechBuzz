@@ -39,16 +39,16 @@ function useFinePointer(): boolean {
 /** Phones: a small static version of the stack under the title (no hover on touch). */
 function MiniStack({ item }: { item: WorkListItem }) {
   const slots = [
-    { i: 1, cls: "-translate-y-[45%] -translate-x-[3%] rotate-[6deg] z-[2]" },
-    { i: 2, cls: "translate-y-[45%] translate-x-[3%] -rotate-[6deg] z-[1]" },
+    { i: 1, cls: "-translate-y-[46%] translate-x-[42%] rotate-[24deg] z-[1]" },
+    { i: 2, cls: "translate-y-[40%] translate-x-[42%] -rotate-[22deg] z-[2]" },
     { i: 0, cls: "z-[3]" },
   ];
   return (
-    <div aria-hidden className="relative mx-auto mb-14 mt-16 aspect-[4/3] w-[56%] md:hidden">
+    <div aria-hidden className="relative mb-20 ml-[10%] mt-24 aspect-square w-[40%] md:hidden">
       {slots.map(({ i, cls }) => {
         const img = item.images?.[i];
         return (
-          <div key={i} className={cn("absolute inset-0 overflow-hidden rounded-xl shadow-[0_20px_50px_-20px_rgb(0_0_0/0.9),0_0_0_1px_rgb(255_255_255/0.08)]", cls)} style={{ backgroundColor: item.color }}>
+          <div key={i} className={cn("absolute inset-0 overflow-hidden rounded-2xl shadow-[0_20px_50px_-20px_rgb(0_0_0/0.9),0_0_0_1px_rgb(255_255_255/0.08)]", cls)} style={{ backgroundColor: item.color }}>
             {img ? (
               <Image src={img.src} alt="" fill sizes="70vw" className="object-cover" />
             ) : (
