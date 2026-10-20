@@ -6,7 +6,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import LiquidGlassCard from "@/components/ui/LiquidGlassCard";
 import { GlassButton } from "@/components/ui/GlassButton";
 import { MetalButton } from "@/components/ui/MetalButton";
@@ -23,6 +24,13 @@ const NAV_LINKS = [
   { label: "Contact",   href: "/contact" },
 ];
 
+/* "About" opens a dropdown with these sub-pages */
+const ABOUT_LINKS = [
+  { label: "Our Team",         href: "/our-team" },
+  { label: "Careers",          href: "/careers" },
+  { label: "Message From CEO", href: "/message-from-ceo" },
+];
+
 /* ─── Navbar ─────────────────────────────────────────────────────────────── */
 
 export default function Navbar() {
@@ -32,18 +40,57 @@ export default function Navbar() {
   const [mobileOpen,  setMobileOpen]  = useState(false);
   const [mounted,     setMounted]     = useState(false);
 
+  /* About dropdown (desktop portal + mobile accordion) */
+  const [aboutOpen,       setAboutOpen]       = useState(false);
+  const [aboutMobileOpen, setAboutMobileOpen] = useState(false);
+  const [aboutPos,        setAboutPos]        = useState<{ top: number; left: number } | null>(null);
+  const aboutTriggerRef = useRef<HTMLButtonElement>(null);
+  const aboutCloseTimer = useRef<number | undefined>(undefined);
+  const aboutJustClosed = useRef(false); // guards the Escape-refocus from reopening via onFocus
+
+  const positionAbout = () => {
+    const el = aboutTriggerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setAboutPos({ top: r.bottom + 12, left: r.left + r.width / 2 });
+  };
+  const openAbout  = () => { if (aboutJustClosed.current) return; window.clearTimeout(aboutCloseTimer.current); positionAbout(); setAboutOpen(true); };
+  const closeAbout = () => {
+    window.clearTimeout(aboutCloseTimer.current);
+    // small delay so moving the cursor into the panel across the gap doesn't close it
+    aboutCloseTimer.current = window.setTimeout(() => setAboutOpen(false), 120);
+  };
+
   /* Portal target for the mobile overlay (the header is now inside a transformed
      HideOnScroll wrapper, so fixed overlays must escape to <body> to fill the screen) */
   useEffect(() => setMounted(true), []);
   const navRef        = useRef<HTMLDivElement>(null);
 
-  /* Scroll listener — initialised on mount so the first frame already has the right state */
+  /* Scroll listener — initialised on mount so the first frame already has the right state.
+     Scrolling also closes the About dropdown (the navbar itself slides away). */
   useEffect(() => {
-    const update = () => setScrolled(window.scrollY > 24);
+    const update = () => { setScrolled(window.scrollY > 24); setAboutOpen(false); };
     update();
     window.addEventListener("scroll", update, { passive: true });
     return () => window.removeEventListener("scroll", update);
   }, []);
+
+  /* Escape closes the About dropdown and returns focus to its trigger */
+  useEffect(() => {
+    if (!aboutOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setAboutOpen(false);
+        aboutJustClosed.current = true;        // suppress the onFocus that the refocus fires
+        aboutTriggerRef.current?.focus();
+        window.setTimeout(() => { aboutJustClosed.current = false; }, 0);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [aboutOpen]);
+
+  useEffect(() => () => window.clearTimeout(aboutCloseTimer.current), []);
 
   /* Lock body scroll when mobile drawer is open */
   useEffect(() => {
@@ -143,14 +190,31 @@ export default function Navbar() {
                 aria-label="Main navigation"
               >
                 {NAV_LINKS.map((link) => {
-                  const active  = isActive(link.href);
-                  const hovered = hoveredLink === link.label;
+                  const active   = isActive(link.href);
+                  const hovered  = hoveredLink === link.label;
+                  const isAbout  = link.label === "About";
+                  const aboutActive = isAbout && ABOUT_LINKS.some((l) => isActive(l.href));
+                  const lit      = active || hovered || aboutActive;
+
+                  const linkStyle = {
+                    display:        "block",
+                    padding:        "0.35rem 0.8rem",
+                    borderRadius:   "10px",
+                    fontSize:       "0.875rem",
+                    fontWeight:     500,
+                    letterSpacing:  "0.01em",
+                    color:          lit ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.58)",
+                    textDecoration: "none",
+                    transition:     "color 0.15s ease",
+                    whiteSpace:     "nowrap",
+                  } as const;
 
                   return (
                     <div
                       key={link.href}
                       style={{ position: "relative" }}
-                      onMouseEnter={() => setHoveredLink(link.label)}
+                      onMouseEnter={() => { setHoveredLink(link.label); if (isAbout) openAbout(); }}
+                      onMouseLeave={isAbout ? closeAbout : undefined}
                     >
                       {/* Sliding liquid glass pill highlight */}
                       <AnimatePresence>
@@ -178,25 +242,23 @@ export default function Navbar() {
                         whileTap={{ scale: 0.91 }}
                         style={{ position: "relative", zIndex: 1 }}
                       >
-                        <Link
-                          href={link.href}
-                          style={{
-                            display:        "block",
-                            padding:        "0.35rem 0.8rem",
-                            borderRadius:   "10px",
-                            fontSize:       "0.875rem",
-                            fontWeight:     500,
-                            letterSpacing:  "0.01em",
-                            color:          active || hovered
-                              ? "rgba(255,255,255,1)"
-                              : "rgba(255,255,255,0.58)",
-                            textDecoration: "none",
-                            transition:     "color 0.15s ease",
-                            whiteSpace:     "nowrap",
-                          }}
-                        >
-                          {link.label}
-                        </Link>
+                        {isAbout ? (
+                          <button
+                            ref={aboutTriggerRef}
+                            type="button"
+                            aria-haspopup="menu"
+                            aria-expanded={aboutOpen}
+                            onFocus={openAbout}
+                            onClick={() => (aboutOpen ? setAboutOpen(false) : openAbout())}
+                            style={{ ...linkStyle, background: "transparent", border: "none", cursor: "pointer", font: "inherit", color: linkStyle.color }}
+                          >
+                            {link.label}
+                          </button>
+                        ) : (
+                          <Link href={link.href} style={linkStyle}>
+                            {link.label}
+                          </Link>
+                        )}
                       </motion.div>
                     </div>
                   );
@@ -320,39 +382,102 @@ export default function Navbar() {
 
                   {/* Links */}
                   <nav style={{ flex: 1, overflowY: "auto", padding: "1rem 0.75rem" }}>
-                    {NAV_LINKS.map((link, i) => (
-                      <motion.div
-                        key={link.href}
-                        initial={{ opacity: 0, x: 16 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.05 + i * 0.04, duration: 0.25 }}
-                      >
-                        <Link
-                          href={link.href}
-                          onClick={() => setMobileOpen(false)}
-                          style={{
-                            display: "block",
-                            padding: "0.75rem 1rem",
-                            borderRadius: "12px",
-                            fontSize: "1rem",
-                            fontWeight: 600,
-                            color: isActive(link.href) ? "#38bdf8" : "rgba(255,255,255,0.80)",
-                            textDecoration: "none",
-                            fontFamily: '"Syne", system-ui, sans-serif',
-                            transition: "background 0.15s ease, color 0.15s ease",
-                          }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)";
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLElement).style.background = "transparent";
-                          }}
+                    {NAV_LINKS.map((link, i) => {
+                      const linkStyle = {
+                        display: "block",
+                        padding: "0.75rem 1rem",
+                        borderRadius: "12px",
+                        fontSize: "1rem",
+                        fontWeight: 600,
+                        textDecoration: "none",
+                        fontFamily: '"Syne", system-ui, sans-serif',
+                        transition: "background 0.15s ease, color 0.15s ease",
+                      } as const;
+                      const divider = <div style={{ height: "1px", background: "rgba(255,255,255,0.05)", margin: "0 1rem" }} />;
+
+                      if (link.label === "About") {
+                        const aboutActive = ABOUT_LINKS.some((l) => isActive(l.href));
+                        return (
+                          <motion.div
+                            key={link.href}
+                            initial={{ opacity: 0, x: 16 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.05 + i * 0.04, duration: 0.25 }}
+                          >
+                            <button
+                              type="button"
+                              aria-haspopup="menu"
+                              aria-expanded={aboutMobileOpen}
+                              onClick={() => setAboutMobileOpen((v) => !v)}
+                              style={{
+                                ...linkStyle,
+                                width: "100%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                background: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                color: aboutActive ? "#38bdf8" : "rgba(255,255,255,0.80)",
+                              }}
+                            >
+                              {link.label}
+                              <ChevronDown size={16} style={{ transition: "transform 0.2s ease", transform: aboutMobileOpen ? "rotate(180deg)" : "none" }} />
+                            </button>
+                            <AnimatePresence initial={false}>
+                              {aboutMobileOpen && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                                  style={{ overflow: "hidden" }}
+                                >
+                                  {ABOUT_LINKS.map((l) => (
+                                    <Link
+                                      key={l.href}
+                                      href={l.href}
+                                      onClick={() => setMobileOpen(false)}
+                                      aria-current={isActive(l.href) ? "page" : undefined}
+                                      style={{
+                                        ...linkStyle,
+                                        padding: "0.6rem 1rem 0.6rem 1.75rem",
+                                        fontSize: "0.95rem",
+                                        fontWeight: 500,
+                                        color: isActive(l.href) ? "#38bdf8" : "rgba(255,255,255,0.68)",
+                                      }}
+                                    >
+                                      {l.label}
+                                    </Link>
+                                  ))}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                            {divider}
+                          </motion.div>
+                        );
+                      }
+
+                      return (
+                        <motion.div
+                          key={link.href}
+                          initial={{ opacity: 0, x: 16 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.05 + i * 0.04, duration: 0.25 }}
                         >
-                          {link.label}
-                        </Link>
-                        <div style={{ height: "1px", background: "rgba(255,255,255,0.05)", margin: "0 1rem" }} />
-                      </motion.div>
-                    ))}
+                          <Link
+                            href={link.href}
+                            onClick={() => setMobileOpen(false)}
+                            style={{ ...linkStyle, color: isActive(link.href) ? "#38bdf8" : "rgba(255,255,255,0.80)" }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)"; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                          >
+                            {link.label}
+                          </Link>
+                          {divider}
+                        </motion.div>
+                      );
+                    })}
                   </nav>
 
                   {/* CTA */}
@@ -368,6 +493,46 @@ export default function Navbar() {
         )}
       </AnimatePresence>,
       document.body,
+      )}
+
+      {/* ── About dropdown (desktop) — portaled to <body> so the navbar's glass clip can't cut it ── */}
+      {mounted && aboutPos && createPortal(
+        <AnimatePresence>
+          {aboutOpen && (
+            <motion.div
+              role="menu"
+              aria-label="About"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              onMouseEnter={() => window.clearTimeout(aboutCloseTimer.current)}
+              onMouseLeave={closeAbout}
+              className="fixed z-[60] w-56 -translate-x-1/2 rounded-2xl border border-white/10 bg-white/[0.04] p-2 backdrop-blur-md shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]"
+              style={{ top: aboutPos.top, left: aboutPos.left }}
+            >
+              {ABOUT_LINKS.map((l) => {
+                const active = isActive(l.href);
+                return (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    role="menuitem"
+                    aria-current={active ? "page" : undefined}
+                    onClick={() => setAboutOpen(false)}
+                    className={cn(
+                      "block rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                      active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/[0.06] hover:text-white",
+                    )}
+                  >
+                    {l.label}
+                  </Link>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body,
       )}
     </>
   );
