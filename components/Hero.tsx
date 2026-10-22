@@ -4,6 +4,7 @@ import { motion, type Variants } from "framer-motion";
 import { GlassButton } from "@/components/ui/GlassButton";
 import { MetalButton } from "@/components/ui/MetalButton";
 import { USE_METAL_BUTTONS } from "@/lib/feature-flags";
+import { HeroSphere } from "@/components/sections/hero-sphere/hero-sphere";
 
 /* ─── Animation variants ─────────────────────────────────────────────────── */
 
@@ -26,10 +27,13 @@ const fadeIn: Variants = {
 
 export default function Hero() {
   return (
-    <section className="relative w-full min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[#030712] pt-32 pb-16">
+    <section className="relative isolate w-full min-h-svh flex flex-col items-center justify-center overflow-hidden pt-[calc(var(--nav-offset,5.5rem)+2rem)] pb-[clamp(3rem,8vh,6rem)]">
 
-      {/* ── Dim Cosmic Arc Background (z-0) ── */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
+      {/* ── 3D geodesic sphere (-z-10 inside this section's stacking context) ── */}
+      <HeroSphere />
+
+      {/* ── Deep-space background (-z-20, so the sphere draws above it and below the content) ── */}
+      <div className="absolute inset-0 -z-20 pointer-events-none">
 
         {/* Base deep-space gradient — blue fades to the global void (#030712) before the section ends */}
         <div
@@ -37,22 +41,6 @@ export default function Hero() {
           style={{
             background:
               "radial-gradient(ellipse 130% 100% at 50% 160%, #1a3a6e 0%, #0d1f4a 20%, #060d24 45%, #030712 75%)",
-          }}
-        />
-
-        {/* The Faint Arc */}
-        <motion.div
-          animate={{ y: [0, 15, 0] }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[-40vw] md:top-[-50vw] left-1/2 -translate-x-1/2 w-[250vw] md:w-[150vw] h-[60vw] rounded-[100%]"
-          style={{
-            borderBottom: "1px solid rgba(6,182,212,0.20)",
-            background: "linear-gradient(to bottom, transparent, rgba(8,47,73,0.05))",
-            boxShadow: "0 40px 120px rgba(6,182,212,0.05)",
-            // PERF: promote to compositor layer so arc float never triggers paint
-            transform: "translateZ(0)",
-            backfaceVisibility: "hidden",
-            willChange: "transform",
           }}
         />
 
@@ -82,7 +70,7 @@ export default function Hero() {
         variants={container}
         initial="hidden"
         animate="visible"
-        className="relative z-10 flex flex-col items-center text-center max-w-5xl mx-auto px-4 gap-8"
+        className="relative z-10 flex flex-col items-center text-center max-w-5xl mx-auto px-4"
       >
         {/* Eyebrow pill */}
         <motion.div variants={fadeIn}>
@@ -114,10 +102,9 @@ export default function Hero() {
         {/* Headline */}
         <motion.h1
           variants={fadeUp}
-          className="text-5xl md:text-7xl font-extrabold tracking-tight leading-tight"
+          className="mt-6 text-5xl md:text-7xl font-extrabold tracking-tight leading-tight"
           style={{
             fontFamily: "var(--font-urbanist), 'Syne', system-ui, sans-serif",
-            margin: 0,
           }}
         >
           <span style={{
@@ -135,7 +122,7 @@ export default function Hero() {
         {/* Subheading */}
         <motion.p
           variants={fadeUp}
-          className="text-gray-400 max-w-2xl text-lg md:text-xl"
+          className="mt-[clamp(1.25rem,3vh,2rem)] max-w-[44ch] text-gray-400 text-lg md:text-xl"
           style={{ lineHeight: 1.7 }}
         >
           We partner with ambitious brands to design, engineer, and launch
@@ -143,7 +130,7 @@ export default function Hero() {
         </motion.p>
 
         {/* CTA buttons */}
-        <motion.div variants={fadeIn} className="flex gap-4 flex-wrap justify-center">
+        <motion.div variants={fadeIn} className="mt-[clamp(1.75rem,4vh,2.5rem)] flex gap-4 flex-wrap justify-center">
           {USE_METAL_BUTTONS ? (
             <MetalButton href="/contact" size="lg" preset="chromatic" className="self-center" data-cursor="magnetic">
               Start a Project

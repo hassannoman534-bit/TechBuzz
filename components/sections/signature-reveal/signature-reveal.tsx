@@ -4,13 +4,13 @@ import { useRef } from "react";
 import {
   motion,
   useMotionValue,
-  useReducedMotion,
   useScroll,
   useSpring,
   useTransform,
   type MotionValue,
 } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
 import { MaskLine } from "./mask-line";
 import { ScrollWords } from "./scroll-words";
 import { WrittenWords } from "./written-words";
@@ -134,7 +134,8 @@ export function SignatureReveal({ content = signatureRevealContent, length = 600
   const stageRef = useRef<HTMLDivElement>(null);
   const letterRef = useRef<HTMLSpanElement>(null);
   const wordRef = useRef<HTMLHeadingElement>(null);
-  const reduce = useReducedMotion();
+  // Hydration safe: false on the server and first client render, so the markup always matches.
+  const reduce = useReducedMotionSafe();
 
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start start", "end end"] });
   // Smooths stepped mouse-wheel input so every scroll tick glides instead of jumping.

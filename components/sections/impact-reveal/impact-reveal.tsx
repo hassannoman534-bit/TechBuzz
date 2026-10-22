@@ -7,13 +7,13 @@ import { USE_METAL_BUTTONS } from "@/lib/feature-flags";
 import {
   motion,
   useMotionValue,
-  useReducedMotion,
   useScroll,
   useSpring,
   useTransform,
   type MotionValue,
 } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
 import { ProofChip } from "./proof-chip";
 import { impactRevealContent, type ImpactRevealContent } from "./impact-reveal.config";
 
@@ -46,13 +46,16 @@ type ImpactRevealProps = {
   /** Section height in vh. Scroll distance = length − 100. */
   length?: number;
   className?: string;
+  /** Slide in over the last screen of the section above (the Signature reveal) instead of after it. The light then rises while the section above fades out, so there is no empty screen between them. */
+  overlapPrevious?: boolean;
 };
 
-export function ImpactReveal({ content = impactRevealContent, length = 520, className }: ImpactRevealProps) {
+export function ImpactReveal({ content = impactRevealContent, length = 520, className, overlapPrevious = false }: ImpactRevealProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const wordRef = useRef<HTMLHeadingElement>(null);
-  const reduce = useReducedMotion();
+  // Hydration safe: false on the server and first client render, so the markup always matches.
+  const reduce = useReducedMotionSafe();
 
   /* Progress: approach (section entering) + pinned. Both spring-smoothed for wheel input. */
   const spring = { stiffness: 170, damping: 34, mass: 0.35, restDelta: 0.0002 };
@@ -139,7 +142,7 @@ export function ImpactReveal({ content = impactRevealContent, length = 520, clas
       data-atmo="cta"
       aria-labelledby="impact-cta-heading"
       className={cn("relative isolate", className)}
-      style={{ height: reduce ? "auto" : `${length}vh` }}
+      style={{ height: reduce ? "auto" : `${length}vh`, marginTop: overlapPrevious && !reduce ? "-100vh" : undefined }}
     >
       {/* Accessible content (the animated version is decorative) */}
       <ul className="sr-only">

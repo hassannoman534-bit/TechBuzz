@@ -9,8 +9,9 @@ export default function Home() {
       <main>
         <Hero />
         <SignatureReveal />
-        <ImpactReveal />
-        <ServicesAccordion />
+        <ImpactReveal overlapPrevious />
+        {/* Impact's pinned stage already leaves space under its CTA, so drop Services' top padding (one side only) */}
+        <ServicesAccordion className="pt-0" />
       </main>
       <SiteFooter />
     </div>

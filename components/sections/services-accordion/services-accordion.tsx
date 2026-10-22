@@ -105,7 +105,7 @@ export function ServicesAccordion({ content = servicesContent, className }: Serv
       data-atmo="services"
       aria-labelledby="services-heading"
       className={cn(
-        "relative isolate px-[clamp(1.25rem,4vw,4rem)] py-[clamp(6rem,12vw,10rem)]",
+        "relative isolate px-[clamp(1.25rem,4vw,4rem)] py-[clamp(5rem,12vh,9rem)]",
         // Row and open heights for the cards (open height fits the longest description)
         "[--svc-row:clamp(4.25rem,6.4vw,6.25rem)] [--svc-open:clamp(19.5rem,25vw,22.5rem)] max-md:[--svc-open:20.5rem]",
         className,
