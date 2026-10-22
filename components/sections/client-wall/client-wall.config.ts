@@ -10,7 +10,9 @@ export type ClientLogo = {
    * width and height are the file's real pixel size (used for the aspect ratio only).
    * Leave out to show the name as a styled wordmark.
    */
-  logo?: { src: string; width: number; height: number };
+  logo?: { src: string; width?: number; height?: number };
+  /** Optical size fine tune for one logo (1 = default). */
+  scale?: number;
   /** Turn the logo pure white so every logo matches the wall (default true). Set false for logos that must keep their colours. */
   mono?: boolean;
   /** Placeholder wordmark look (only used when there is no logo file) */
@@ -40,25 +42,27 @@ export const clientWall: ClientWallContent = {
   tiles: 12,
   clients: [
     // Strongest / clearest wordmarks first — these fill the wall before any flipping starts.
-    { name: "iTechTics",                   logo: { src: "/assets/logos/iTechTics.png",                 width: 500, height: 500 } },
-    { name: "WebTech.dev",                 logo: { src: "/assets/logos/WebTech.dev.png",               width: 500, height: 500 } },
-    { name: "AK Studios",                  logo: { src: "/assets/logos/client-15.png",                 width: 500, height: 500 } },
-    { name: "Bold Security Group",         logo: { src: "/assets/logos/client-17.png",                 width: 150, height: 150 } },
-    { name: "West End Technical Services", logo: { src: "/assets/logos/client-18.png",                 width: 500, height: 500 } },
-    { name: "Window Price Online",         logo: { src: "/assets/logos/Window%20Price%20Online.png",   width: 500, height: 500 } },
-    { name: "AMTS Dubai",                  logo: { src: "/assets/logos/AMTS%20dubai.png",              width: 500, height: 500 } },
-    { name: "AMA Energy Solar",            logo: { src: "/assets/logos/Ama%20Energy%20Solar.png",      width: 500, height: 500 } },
-    { name: "Secure Glaze",                logo: { src: "/assets/logos/Secure%20Glaze.png",            width: 500, height: 500 } },
-    { name: "Mall One Wazirabad",          logo: { src: "/assets/logos/Mall%20One%20Wazirabad.png",    width: 500, height: 500 } },
-    { name: "Stronger Forever",            logo: { src: "/assets/logos/Stronger%20Forverer.png",       width: 500, height: 500 } },
-    { name: "Apex Cart",                   logo: { src: "/assets/logos/Apex%20Cart.png",               width: 500, height: 500 } },
+    // All logos use the trimmed copies (cropped tight to the artwork); width/height are the trimmed sizes.
+    // Badge-style logos (solid fill): keep their own colours, otherwise the white filter makes a white box.
+    { name: "iTechTics",                   logo: { src: "/assets/logos/trimmed/itechtics.png",            width: 383, height: 87 },  mono: false },
+    { name: "WebTech.dev",                 logo: { src: "/assets/logos/trimmed/webtech-dev.png",          width: 401, height: 85 } },
+    { name: "AK Studios",                  logo: { src: "/assets/logos/trimmed/client-15.png",            width: 303, height: 251 } },
+    { name: "Bold Security Group",         logo: { src: "/assets/logos/trimmed/client-17.png",            width: 121, height: 52 } },
+    { name: "West End Technical Services", logo: { src: "/assets/logos/trimmed/client-18.png",            width: 389, height: 104 } },
+    { name: "Window Price Online",         logo: { src: "/assets/logos/trimmed/window-price-online.png",  width: 371, height: 131 } },
+    { name: "AMTS Dubai",                  logo: { src: "/assets/logos/trimmed/amts-dubai.png",           width: 362, height: 98 } },
+    { name: "AMA Energy Solar",            logo: { src: "/assets/logos/trimmed/ama-energy-solar.png",     width: 322, height: 169 } },
+    { name: "Secure Glaze",                logo: { src: "/assets/logos/trimmed/secure-glaze.png",         width: 339, height: 200 } },
+    { name: "Mall One Wazirabad",          logo: { src: "/assets/logos/trimmed/mall-one-wazirabad.png",   width: 357, height: 103 } },
+    { name: "Stronger Forever",            logo: { src: "/assets/logos/trimmed/stronger-forverer.png",    width: 326, height: 327 } },
+    { name: "Apex Cart",                   logo: { src: "/assets/logos/trimmed/apex-cart.png",            width: 339, height: 341 } },
     // The rest flip in one at a time.
-    { name: "Ertex Cart LLC",              logo: { src: "/assets/logos/Ertex%20Cart%20LLC.png",        width: 500, height: 500 } },
-    { name: "Earn Flex",                   logo: { src: "/assets/logos/Earn%20Flex.png",               width: 500, height: 500 } },
-    { name: "A1A Global Ground",           logo: { src: "/assets/logos/A1A%20Global%20Ground.png",     width: 500, height: 500 } },
-    { name: "Zircoon Solutions",           logo: { src: "/assets/logos/client-19.png",                 width: 135, height: 135 } },
-    { name: "LoveNils",                    logo: { src: "/assets/logos/LoveNils.png",                  width: 135, height: 135 } },
-    { name: "YK",                          logo: { src: "/assets/logos/YK.png",                        width: 500, height: 500 } },
-    { name: "HS",                          logo: { src: "/assets/logos/client-12.png",                 width: 500, height: 500 } },
+    { name: "Ertex Cart LLC",              logo: { src: "/assets/logos/trimmed/ertex-cart-llc.png",       width: 394, height: 101 } },
+    { name: "Earn Flex",                   logo: { src: "/assets/logos/trimmed/earn-flex.png",            width: 392, height: 78 } },
+    { name: "A1A Global Ground",           logo: { src: "/assets/logos/trimmed/a1a-global-ground.png",    width: 352, height: 208 }, mono: false },
+    { name: "Zircoon Solutions",           logo: { src: "/assets/logos/trimmed/client-19.png",            width: 125, height: 42 } },
+    { name: "LoveNils",                    logo: { src: "/assets/logos/trimmed/lovenils.png",             width: 135, height: 85 } },
+    { name: "YK",                          logo: { src: "/assets/logos/trimmed/yk.png",                   width: 262, height: 299 } },
+    { name: "HS",                          logo: { src: "/assets/logos/trimmed/client-12.png",            width: 250, height: 297 } },
   ],
 };
