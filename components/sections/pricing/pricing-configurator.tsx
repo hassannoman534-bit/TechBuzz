@@ -100,119 +100,150 @@ export function PricingConfigurator({ content = pricingContent, className }: Pri
     <EnquiryPanel cart={cart} form={form} onForm={setForm} status={status} sent={sent} onSubmit={submit} onNew={startNew} dispatch={dispatch} />
   );
 
+  // Switching service or tab starts the middle column at the top.
+  const centerScroll = useRef<HTMLDivElement>(null);
+  const pickService = useCallback((i: number) => {
+    setActive(i);
+    centerScroll.current?.scrollTo({ top: 0 });
+  }, []);
+
+  const panelBox =
+    "rounded-[22px] bg-white/[0.02] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)]";
+  /** each desktop column fills the screen height and scrolls on its own */
+  const colScroll =
+    "lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain [scrollbar-width:thin] [scrollbar-color:rgb(255_255_255/0.14)_transparent]";
+
   return (
-    <section ref={section} id="pricing" aria-label="Pricing" className={cn("relative bg-[#030712] px-[clamp(1rem,4vw,4rem)] pb-[clamp(5rem,12vh,9rem)] text-white", className)}>
+    <section
+      ref={section}
+      id="pricing"
+      aria-labelledby="pricing-title"
+      className={cn(
+        "relative bg-[#030712] px-[clamp(0.75rem,2.2vw,2.5rem)] pb-[clamp(5rem,12vh,8rem)] pt-[calc(var(--nav-offset,5.5rem)+1rem)] text-white",
+        // desktop: one full screen app panel, nothing cut off
+        "lg:flex lg:h-svh lg:min-h-[38rem] lg:flex-col lg:pb-4",
+        className,
+      )}
+    >
+      <h1 id="pricing-title" className="sr-only">
+        Pricing
+      </h1>
+
       <motion.div
-        initial={reduce ? false : { opacity: 0, y: 40 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "0px 0px -10% 0px" }}
-        transition={{ duration: 1.1, ease: EASE }}
-        className="mx-auto max-w-[92rem]"
+        initial={reduce ? false : { opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.9, ease: EASE, delay: 0.1 }}
+        className="mx-auto flex w-full max-w-[96rem] flex-col gap-3 lg:min-h-0 lg:flex-1"
       >
         <BundleBanner content={content} state={state} />
 
-        <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[15.5rem_minmax(0,1fr)_20.5rem] 2xl:grid-cols-[17rem_minmax(0,1fr)_22rem]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:min-h-0 lg:flex-1 lg:grid-rows-[minmax(0,1fr)] lg:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)_19.5rem] 2xl:grid-cols-[16.5rem_minmax(0,1fr)_21rem]">
           {/* services */}
-          <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start lg:rounded-[26px] lg:bg-white/[0.02] lg:p-3 lg:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)]">
-            <ServiceNav services={content.services} active={active} selected={selectedSvcs} nextDiscount={nextDiscount} onSelect={setActive} />
+          <aside className={cn("min-w-0 lg:rounded-[22px] lg:bg-white/[0.02] lg:p-3 lg:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)]", colScroll)} data-lenis-prevent>
+            <ServiceNav services={content.services} active={active} selected={selectedSvcs} nextDiscount={nextDiscount} onSelect={pickService} />
           </aside>
 
-          {/* packages + add-ons */}
-          <div className="min-w-0 rounded-[26px] bg-white/[0.02] p-[clamp(1rem,2vw,1.75rem)] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)]">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={`${active}-${subIndex}`}
-                initial={reduce ? false : { opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduce ? undefined : { opacity: 0, y: -10 }}
-                transition={{ duration: 0.45, ease: EASE }}
-              >
-                <div className="flex flex-wrap items-end justify-between gap-4">
-                  <div>
-                    <p className="text-[0.7rem] font-medium uppercase tracking-[0.2em] text-white/45">Choose a package</p>
-                    <h3 className="mt-2 font-footer-display text-[clamp(1.6rem,2.6vw,2.4rem)] font-medium leading-tight tracking-[-0.035em]">{svc.label}</h3>
-                  </div>
-                  {pickedHere !== undefined && (
-                    <p className="text-[0.82rem] text-white/50">Tap the selected package again to remove it</p>
-                  )}
+          {/* packages + add-ons: header stays, content scrolls */}
+          <div className={cn("flex min-w-0 flex-col lg:min-h-0", panelBox)}>
+            <div className="shrink-0 border-b border-white/[0.06] px-[clamp(1rem,1.6vw,1.5rem)] pb-3 pt-4">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <div className="flex items-baseline gap-3">
+                  <h2 className="font-footer-display text-[clamp(1.25rem,1.6vw,1.6rem)] font-medium tracking-[-0.03em]">{svc.label}</h2>
+                  <span className="text-[0.78rem] text-white/45">Select a package</span>
                 </div>
+                {pickedHere !== undefined && <p className="text-[0.75rem] text-white/45">Click the selected package again to remove it</p>}
+              </div>
 
-                {svc.subs.length > 1 && (
-                  <div role="tablist" aria-label={`${svc.label} options`} className="mt-5 flex flex-wrap gap-2">
-                    {svc.subs.map((s, i) => {
-                      const on = i === subIndex;
-                      const has = state.picked[slotKey(active, i)] !== undefined;
-                      return (
-                        <button
-                          key={s.label}
-                          type="button"
-                          role="tab"
-                          aria-selected={on}
-                          onClick={() => setSubBySvc((m) => ({ ...m, [active]: i }))}
-                          className={cn(
-                            "relative rounded-full px-4 py-2 text-[0.85rem] font-medium outline-none transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-[#7b61ff]/70",
-                            on ? "text-white" : "text-white/55 ring-1 ring-white/10 hover:text-white",
-                          )}
-                        >
-                          {on && (
-                            <motion.span
-                              layoutId="pricing-sub-active"
-                              transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                              className="absolute inset-0 -z-10 rounded-full bg-[linear-gradient(120deg,#7b61ff,#5b7cff)]"
-                            />
-                          )}
-                          {s.label}
-                          {has && <span className="ml-1.5 inline-block size-1.5 rounded-full bg-[#22d8ff] align-middle" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                <div className="mt-6 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,13rem),1fr))]">
-                  {sub.pkgs.map((pkg, pi) => (
-                    <PackageCard
-                      key={pkg.name}
-                      pkg={pkg}
-                      index={pi}
-                      selected={pickedHere === pi}
-                      discount={slotDiscount}
-                      onToggle={() => dispatch({ type: "toggle", key, index: pi })}
-                    />
-                  ))}
+              {svc.subs.length > 1 && (
+                <div role="tablist" aria-label={`${svc.label} options`} className="mt-3 flex flex-wrap gap-1.5">
+                  {svc.subs.map((s, i) => {
+                    const on = i === subIndex;
+                    const has = state.picked[slotKey(active, i)] !== undefined;
+                    return (
+                      <button
+                        key={s.label}
+                        type="button"
+                        role="tab"
+                        aria-selected={on}
+                        onClick={() => {
+                          setSubBySvc((m) => ({ ...m, [active]: i }));
+                          centerScroll.current?.scrollTo({ top: 0 });
+                        }}
+                        className={cn(
+                          "relative isolate rounded-full px-3.5 py-1.5 text-[0.8rem] font-medium outline-none transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-[#7b61ff]/70",
+                          on ? "text-white" : "text-white/55 ring-1 ring-white/10 hover:text-white",
+                        )}
+                      >
+                        {on && (
+                          <motion.span
+                            layoutId="pricing-sub-active"
+                            transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                            className="absolute inset-0 -z-10 rounded-full bg-[linear-gradient(120deg,#7b61ff,#5b7cff)]"
+                          />
+                        )}
+                        {s.label}
+                        {has && <span className="ml-1.5 inline-block size-1.5 rounded-full bg-[#22d8ff] align-middle" />}
+                      </button>
+                    );
+                  })}
                 </div>
+              )}
+            </div>
 
-                {sub.addons.some((g) => g.items.length > 0) && (
-                  <div className="mt-10">
-                    <div className="flex items-baseline justify-between gap-4">
-                      <p className="text-[0.7rem] font-medium uppercase tracking-[0.2em] text-white/45">Add-ons</p>
-                      <p className="text-[0.8rem] text-white/40">Optional extras, billed at full price</p>
-                    </div>
-                    {sub.addons.map((group, ci) => (
-                      <div key={`${group.cat}-${ci}`} className="mt-4">
-                        {group.cat && <p className="mb-2.5 text-[0.85rem] font-semibold text-[#c9c2ff]">{group.cat}</p>}
-                        <div className="grid gap-2 md:grid-cols-2">
-                          {group.items.map((a, ai) => {
-                            const k = addonKey(active, subIndex, ci, ai);
-                            return <AddonRow key={k} addon={a} qty={state.qty[k] ?? 0} onChange={(d) => dispatch({ type: "qty", key: k, delta: d })} />;
-                          })}
-                        </div>
-                      </div>
+            <div ref={centerScroll} className={cn("px-[clamp(1rem,1.6vw,1.5rem)] py-4 lg:flex-1", colScroll)} data-lenis-prevent>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={`${active}-${subIndex}`}
+                  initial={reduce ? false : { opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reduce ? undefined : { opacity: 0, y: -8 }}
+                  transition={{ duration: 0.4, ease: EASE }}
+                >
+                  <div className="grid items-stretch gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,12.5rem),1fr))]">
+                    {sub.pkgs.map((pkg, pi) => (
+                      <PackageCard
+                        key={pkg.name}
+                        pkg={pkg}
+                        index={pi}
+                        selected={pickedHere === pi}
+                        discount={slotDiscount}
+                        onToggle={() => dispatch({ type: "toggle", key, index: pi })}
+                      />
                     ))}
                   </div>
-                )}
-              </motion.div>
-            </AnimatePresence>
+
+                  {sub.addons.some((g) => g.items.length > 0) && (
+                    <div className="mt-7">
+                      <div className="flex items-baseline justify-between gap-4">
+                        <p className="text-[0.68rem] font-medium uppercase tracking-[0.2em] text-white/45">Add-ons</p>
+                        <p className="text-[0.75rem] text-white/40">Optional extras, billed at full price</p>
+                      </div>
+                      {sub.addons.map((group, ci) => (
+                        <div key={`${group.cat}-${ci}`} className="mt-3">
+                          {group.cat && <p className="mb-2 text-[0.8rem] font-semibold text-[#c9c2ff]">{group.cat}</p>}
+                          <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
+                            {group.items.map((a, ai) => {
+                              const k = addonKey(active, subIndex, ci, ai);
+                              return <AddonRow key={k} addon={a} qty={state.qty[k] ?? 0} onChange={(d) => dispatch({ type: "qty", key: k, delta: d })} />;
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </div>
 
           {/* details + summary (desktop) */}
-          <aside className="hidden xl:sticky xl:top-24 xl:block xl:self-start xl:rounded-[26px] xl:bg-white/[0.02] xl:p-5 xl:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)]">
+          <aside className={cn("hidden min-w-0 p-4 xl:block", panelBox, colScroll)} data-lenis-prevent>
             {panel}
           </aside>
         </div>
       </motion.div>
 
-      {/* tablets and phones: floating selection bar + bottom sheet */}
+      {/* below xl: floating selection bar + bottom sheet */}
       <div className="xl:hidden">
         <MobileCart
           open={sheet}

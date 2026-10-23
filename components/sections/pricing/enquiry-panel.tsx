@@ -46,17 +46,17 @@ function Field({
 }) {
   const id = useId();
   const cls = cn(
-    "w-full rounded-xl bg-white/[0.035] px-3.5 py-2.5 text-[0.9rem] text-white placeholder:text-white/30 outline-none ring-1 transition-[box-shadow,background-color] duration-300 focus:bg-white/[0.05] focus:ring-[#7b61ff]/70",
+    "w-full rounded-xl bg-white/[0.035] px-3 py-2 text-[0.85rem] text-white placeholder:text-white/30 outline-none ring-1 transition-[box-shadow,background-color] duration-300 focus:bg-white/[0.05] focus:ring-[#7b61ff]/70",
     invalid ? "ring-[#ff6b8b]/70" : "ring-white/10",
   );
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-[0.78rem] font-medium text-white/60">
+      <label htmlFor={id} className="mb-1 block text-[0.74rem] font-medium text-white/60">
         {label}
         {required && <span className="text-[#7ce9ff]"> *</span>}
       </label>
       {textarea ? (
-        <textarea id={id} rows={3} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={cn(cls, "resize-none")} />
+        <textarea id={id} rows={2} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={cn(cls, "resize-none")} />
       ) : (
         <input id={id} type={type} value={value} placeholder={placeholder} required={required} onChange={(e) => onChange(e.target.value)} className={cls} />
       )}
@@ -132,18 +132,18 @@ export function EnquiryPanel({ cart, form, onForm, status, sent, onSubmit, onNew
           </motion.div>
         ) : (
           <motion.form key="form" onSubmit={submit} noValidate initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}>
-            <p className="mb-3 text-[0.7rem] font-medium uppercase tracking-[0.2em] text-white/45">Your details</p>
-            <div className="space-y-3">
+            <p className="mb-2.5 text-[0.68rem] font-medium uppercase tracking-[0.2em] text-white/45">Your details</p>
+            <div className="space-y-2.5">
               <Field label="Full Name" required value={form.name} placeholder="Jane Smith" invalid={tried && !nameOk} onChange={(v) => onForm({ ...form, name: v })} />
               <Field label="Email" type="email" required value={form.email} placeholder="jane@company.com" invalid={tried && !emailOk} onChange={(v) => onForm({ ...form, email: v })} />
               <Field label="Business" value={form.business} placeholder="Optional" onChange={(v) => onForm({ ...form, business: v })} />
               <Field label="Message" textarea value={form.message} placeholder="Goals or context..." onChange={(v) => onForm({ ...form, message: v })} />
             </div>
 
-            <p className="mb-3 mt-6 text-[0.7rem] font-medium uppercase tracking-[0.2em] text-white/45">Selection</p>
+            <p className="mb-2 mt-5 text-[0.68rem] font-medium uppercase tracking-[0.2em] text-white/45">Selection</p>
             <div className="rounded-2xl bg-white/[0.025] p-3 ring-1 ring-white/[0.08]">
               {cart.items.length === 0 ? (
-                <p className="py-6 text-center text-[0.85rem] text-white/40">No services selected yet</p>
+                <p className="py-4 text-center text-[0.8rem] text-white/40">No services selected yet</p>
               ) : (
                 <ul className="space-y-1.5">
                   <AnimatePresence initial={false}>
@@ -197,7 +197,7 @@ export function EnquiryPanel({ cart, form, onForm, status, sent, onSubmit, onNew
                 </AnimatePresence>
                 <div className="flex items-baseline justify-between pt-1">
                   <span className="text-white/70">Total{cart.hasCustom ? " + custom" : ""}</span>
-                  <span className="font-footer-display text-[1.5rem] font-semibold tracking-[-0.02em] text-white">
+                  <span className="font-footer-display text-[1.3rem] font-semibold tracking-[-0.02em] text-white">
                     <AnimatedNumber value={cart.total} />
                     {cart.hasCustom ? "+" : ""}
                   </span>
@@ -208,16 +208,19 @@ export function EnquiryPanel({ cart, form, onForm, status, sent, onSubmit, onNew
             {status === "error" && <p className="mt-3 text-[0.82rem] text-[#ff8aa3]">Something went wrong sending your enquiry. Please try again or message us on WhatsApp.</p>}
             {tried && (!nameOk || !emailOk) && <p className="mt-3 text-[0.82rem] text-[#ff8aa3]">Please enter your name and a valid email.</p>}
 
+            {/* stays visible at the bottom while the details column scrolls */}
+            <div className="sticky bottom-0 z-10 -mx-1 bg-[linear-gradient(to_bottom,transparent,#080b17_40%)] px-1 pb-0.5 pt-3">
             <button
               type="submit"
               disabled={status === "sending"}
-              className="group relative mt-4 flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-[linear-gradient(120deg,#7b61ff,#5b7cff_55%,#22a8ff)] px-6 py-3.5 text-[0.95rem] font-semibold text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.3),0_18px_40px_-16px_rgb(123_97_255/0.9)] outline-none transition-transform duration-300 hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-white/60 disabled:opacity-70 [isolation:isolate]"
+              className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-[linear-gradient(120deg,#7b61ff,#5b7cff_55%,#22a8ff)] px-6 py-3 text-[0.9rem] font-semibold text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.3),0_18px_40px_-16px_rgb(123_97_255/0.9)] outline-none transition-transform duration-300 hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-white/60 disabled:opacity-70 [isolation:isolate]"
             >
               <span aria-hidden className="absolute inset-x-[-10%] top-full -z-10 aspect-square rounded-[45%] bg-[#4b3fd8] transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-[70%]" />
               {status === "sending" ? <Loader2 className="size-4 animate-spin" /> : null}
               {status === "sending" ? "Sending..." : "Send Enquiry"}
               {status !== "sending" && <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-1" />}
             </button>
+            </div>
           </motion.form>
         )}
       </AnimatePresence>

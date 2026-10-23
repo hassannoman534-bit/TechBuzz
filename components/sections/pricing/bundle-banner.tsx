@@ -20,8 +20,8 @@ export function BundleBanner({ content, state }: BundleBannerProps) {
   const t2 = Math.round(content.discount.tier2 * 100);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-[linear-gradient(100deg,rgb(123_97_255/0.14),rgb(34_168_255/0.08)_60%,rgb(44_245_176/0.06))] px-4 py-3 shadow-[inset_0_0_0_1px_rgb(123_97_255/0.3)]">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.85rem]">
+    <div className="relative overflow-hidden shrink-0 rounded-2xl bg-[linear-gradient(100deg,rgb(123_97_255/0.14),rgb(34_168_255/0.08)_60%,rgb(44_245_176/0.06))] px-4 py-2.5 shadow-[inset_0_0_0_1px_rgb(123_97_255/0.3)]">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.8rem]">
         <Zap aria-hidden className="size-4 shrink-0 text-[#22d8ff]" strokeWidth={2} />
         <span className="rounded-full bg-[linear-gradient(120deg,#7b61ff,#5b7cff)] px-2.5 py-0.5 text-[0.72rem] font-bold text-white">
           {Math.round((next || content.discount.tier1) * 100)}% OFF

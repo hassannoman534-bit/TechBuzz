@@ -44,7 +44,7 @@ export function ServiceNav({ services, active, selected, nextDiscount, onSelect 
         )}
       </div>
 
-      <ul className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-2 [scrollbar-width:none] lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0 lg:pb-0">
+      <ul className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-2 [scrollbar-width:none] lg:mx-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:px-0 lg:pb-0">
         {services.map((svc, i) => {
           const Icon = SERVICE_ICONS[svc.id];
           const isActive = i === active;
@@ -56,7 +56,7 @@ export function ServiceNav({ services, active, selected, nextDiscount, onSelect 
                 onClick={() => onSelect(i)}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "group relative flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left outline-none transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-[#7b61ff]/70",
+                  "group relative isolate flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left outline-none transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-[#7b61ff]/70",
                   "max-lg:rounded-full max-lg:py-2 max-lg:pr-4 max-lg:ring-1 max-lg:ring-white/10",
                   isActive ? "text-white" : "text-white/60 hover:text-white",
                 )}
@@ -70,14 +70,14 @@ export function ServiceNav({ services, active, selected, nextDiscount, onSelect 
                 )}
                 <span
                   className={cn(
-                    "grid size-9 shrink-0 place-items-center rounded-xl ring-1 transition-colors duration-300 max-lg:size-7 max-lg:rounded-full",
+                    "grid size-8 shrink-0 place-items-center rounded-lg ring-1 transition-colors duration-300 max-lg:size-7 max-lg:rounded-full",
                     isActive ? "bg-[#7b61ff]/20 text-white ring-[#7b61ff]/50" : "bg-white/[0.03] text-white/60 ring-white/10 group-hover:text-white",
                   )}
                 >
-                  <Icon className="size-[1.05rem] max-lg:size-3.5" strokeWidth={1.7} />
+                  <Icon className="size-[0.95rem] max-lg:size-3.5" strokeWidth={1.7} />
                 </span>
                 <span className="min-w-0">
-                  <span className="block whitespace-nowrap text-[0.92rem] lg:whitespace-normal font-medium leading-tight">{svc.label}</span>
+                  <span className="block whitespace-nowrap text-[0.85rem] lg:whitespace-normal font-medium leading-tight">{svc.label}</span>
                   {isPicked && (
                     <motion.span
                       initial={{ opacity: 0, y: 4 }}
