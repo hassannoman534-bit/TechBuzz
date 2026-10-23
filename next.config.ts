@@ -7,6 +7,13 @@ const nextConfig: NextConfig = {
   },
   cacheComponents: true,
   partialPrefetching: true,
+  async redirects() {
+    return [
+      // Keep the old techbuzz.com.pk/pricings URL working.
+      { source: "/pricings", destination: "/pricing", permanent: true },
+      { source: "/pricings/", destination: "/pricing", permanent: true },
+    ];
+  },
   turbopack: {
     rules: {
       "*.css": {
