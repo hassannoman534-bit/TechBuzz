@@ -23,7 +23,7 @@ type HeroSphereProps = {
  * fades as the hero leaves), and tilts gently toward the mouse. The render loop stops while the hero
  * is off screen; with reduced motion it is a single still frame.
  */
-export function HeroSphere({ opacity = 0.34, fill = 0.98, className }: HeroSphereProps) {
+export function HeroSphere({ opacity = 0.2, fill = 0.72, className }: HeroSphereProps) {
   const reduce = useReducedMotionSafe();
   const layer = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(true);

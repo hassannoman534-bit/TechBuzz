@@ -102,19 +102,14 @@ export default function Hero() {
         {/* Headline */}
         <motion.h1
           variants={fadeUp}
-          className="mt-6 text-5xl md:text-7xl font-extrabold tracking-tight leading-tight"
+          className="mt-6 text-[clamp(2.75rem,min(6.2vw,10.5svh),6.5rem)] font-extrabold tracking-tight leading-[1.02]"
           style={{
             fontFamily: "var(--font-urbanist), 'Syne', system-ui, sans-serif",
+            // inline so it beats the global h1 colour and matches "Built to Scale."
+            color: "#ffffff",
           }}
         >
-          <span style={{
-            background:           "linear-gradient(110deg, #67e8f9 0%, #ffffff 60%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor:  "transparent",
-            backgroundClip:       "text",
-          }}>
-            Digital Experiences
-          </span>
+          Digital Experiences
           <br />
           <span className="text-white">Built to Scale.</span>
         </motion.h1>
@@ -122,8 +117,7 @@ export default function Hero() {
         {/* Subheading */}
         <motion.p
           variants={fadeUp}
-          className="mt-[clamp(1.25rem,3vh,2rem)] max-w-[44ch] text-gray-400 text-lg md:text-xl"
-          style={{ lineHeight: 1.7 }}
+          className="mt-[clamp(1.25rem,3vh,2rem)] max-w-[50ch] text-[clamp(1rem,1.25vw,1.2rem)] leading-relaxed text-gray-400"
         >
           We partner with ambitious brands to design, engineer, and launch
           high-performance web applications and digital platforms.
