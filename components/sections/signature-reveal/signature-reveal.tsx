@@ -127,11 +127,9 @@ type SignatureRevealProps = {
   /** Section height in vh. Scroll distance = length − 100. */
   length?: number;
   className?: string;
-  /** Show the small intro line at the top of the stage. Off when RollingStatement plays the same text before this section. */
-  showIntro?: boolean;
 };
 
-export function SignatureReveal({ content = signatureRevealContent, length = 600, className, showIntro = true }: SignatureRevealProps) {
+export function SignatureReveal({ content = signatureRevealContent, length = 600, className }: SignatureRevealProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const letterRef = useRef<HTMLSpanElement>(null);
@@ -188,9 +186,7 @@ export function SignatureReveal({ content = signatureRevealContent, length = 600
   const wordOpacity = useTransform(p, [T.word[0], T.word[0] + 0.05], [0, 1]);
   const trail = useTransform(p, [T.word[0], T.word[1] - 0.03, T.word[1]], [1, 1, 0]);
 
-  /* Intro + exit */
-  const introOpacity = useTransform(p, [0, 0.14], [1, 0]);
-  const introY = useTransform(p, [0, 0.18], ["0vh", "-10vh"]);
+  /* Exit */
   const contentOpacity = useTransform(p, [T.exit[0], T.exit[1]], [1, 0]);
   const contentY = useTransform(p, [T.exit[0], T.exit[1]], ["0vh", "-8vh"]);
   const glowOpacity = useTransform(p, [T.exit[0] - 0.04, T.exit[0] + 0.06, 1], [0, 1, 0.7]);
@@ -208,16 +204,6 @@ export function SignatureReveal({ content = signatureRevealContent, length = 600
     >
       <div ref={stageRef} className="sticky top-0 h-svh overflow-hidden">
         {content.quote && <p className="sr-only">{content.quote}</p>}
-
-        {/* Intro line */}
-        {showIntro && (
-          <motion.p
-            style={{ opacity: introOpacity, y: introY }}
-            className="absolute inset-x-0 top-[13svh] z-20 mx-auto max-w-[34ch] px-6 text-center font-signature text-[clamp(0.95rem,1.25vw,1.15rem)] font-medium leading-snug tracking-[-0.01em] text-ink"
-          >
-            {content.intro}
-          </motion.p>
-        )}
 
         {/* Word + lockup */}
         <motion.div

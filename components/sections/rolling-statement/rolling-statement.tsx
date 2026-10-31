@@ -49,8 +49,9 @@ export function RollingStatement({ content = rollingStatementContent, className 
     const pin = Math.max(travel - vh, vh * MIN_PIN_VH);
     section.style.height = `${pin + vh}px`;
     const top = section.getBoundingClientRect().top + window.scrollY;
-    // The roll starts when the stage is half in view and ends when it is half out.
-    geo.current = { top, vh, lineH, radius, pin, speed: travel / (pin + vh) };
+    // The roll starts when the stage is half in view; the last line clears exactly as the section
+    // ends, so no empty gap is left before Signature. (+vh*0.5 lead-in, drum spans to the bottom.)
+    geo.current = { top, vh, lineH, radius, pin, speed: travel / (pin + vh * 1.5) };
   }, [content.lines.length]);
 
   const render = useCallback((scroll: number) => {

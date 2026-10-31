@@ -13,7 +13,6 @@ export type SignatureLogo = {
 };
 
 export type SignatureRevealContent = {
-  intro: string;
   /** The word is split around the bracketed letter: before + ( letter ) + after */
   word: { before: string; letter: string; after: string };
   eyebrow: string;
@@ -30,8 +29,6 @@ export type SignatureRevealContent = {
 };
 
 export const signatureRevealContent: SignatureRevealContent = {
-  intro:
-    "TechBuzz builds brands, platforms and campaigns for companies that would rather be talked about than scrolled past.",
   word: { before: "RES", letter: "O", after: "NANCE" },
   eyebrow: "( TechBuzz — Since 2019 )",
   serifLines: ["Digital Agency", "Lahore, Worldwide"],
