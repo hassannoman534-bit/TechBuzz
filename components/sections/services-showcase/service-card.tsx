@@ -17,9 +17,9 @@ const PAN = 12; // px the picture drifts against the cursor
 const SPRING = { stiffness: 180, damping: 22, mass: 0.6 };
 
 /**
- * One service: portrait picture plus caption. On desktop hover the picture tilts toward the cursor,
- * zooms and drifts the other way (parallax), a light follows the pointer, an accent rim lights up and a
- * glass "View pricing" chip rises. Pointer work runs on motion values only, no React state per move.
+ * One service: portrait picture plus a two line caption. On desktop hover the picture tilts toward the
+ * cursor, zooms and drifts the other way (parallax), a light follows the pointer, an accent rim lights up
+ * and a "View pricing" chip rises. Pointer work runs on motion values only, no React state per move.
  */
 export function ServiceCard({ card, href, priority = false }: ServiceCardProps) {
   const fine = useFinePointer();
@@ -73,14 +73,7 @@ export function ServiceCard({ card, href, priority = false }: ServiceCardProps) 
           <motion.div style={live ? { x: panX, y: panY } : undefined} className="absolute -inset-4">
             <div className="absolute inset-0 transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/card:scale-[1.08]">
               {card.image ? (
-                <Image
-                  src={card.image}
-                  alt=""
-                  fill
-                  priority={priority}
-                  sizes="(min-width: 1024px) 22vw, 46vw"
-                  className="object-cover"
-                />
+                <Image src={card.image} alt="" fill priority={priority} sizes="(min-width: 1024px) 26vw, 46vw" className="object-cover" />
               ) : (
                 <ServiceArt id={card.id} index={card.index} accent={card.accent} />
               )}
@@ -101,9 +94,7 @@ export function ServiceCard({ card, href, priority = false }: ServiceCardProps) 
 
           {/* View pricing chip */}
           <div className="pointer-events-none absolute inset-x-3 bottom-3 flex translate-y-3 items-center justify-between gap-2 rounded-full bg-black/45 py-1.5 pl-3.5 pr-1.5 opacity-0 shadow-[inset_0_1px_0_rgb(255_255_255/0.18),inset_0_0_0_1px_rgb(255_255_255/0.1)] transition-[translate,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/card:translate-y-0 group-hover/card:opacity-100 group-focus-visible/card:translate-y-0 group-focus-visible/card:opacity-100">
-            <span className="truncate font-footer-text text-[0.72rem] font-medium text-white/90">
-              View pricing
-            </span>
+            <span className="truncate font-footer-text text-[0.72rem] font-medium text-white/90">View pricing</span>
             <span className="grid size-7 shrink-0 place-items-center rounded-full text-white" style={{ background: `linear-gradient(140deg, ${a}, ${b})` }}>
               <ArrowUpRightIcon className="size-3.5" strokeWidth={2} />
             </span>
@@ -129,21 +120,25 @@ export function ServiceCard({ card, href, priority = false }: ServiceCardProps) 
         />
       </motion.div>
 
-      {/* Caption */}
-      <div className="mt-3 font-footer-text">
-        <div className="flex items-baseline justify-between gap-3 text-[0.68rem] uppercase tracking-[0.2em] text-white/40">
-          <span className="transition-colors duration-500 group-hover/card:text-[#7ce9ff]">{card.index}</span>
-          <span className="hidden sm:inline">{card.fromPrice !== null ? `From $${card.fromPrice.toLocaleString("en-US")}` : "Custom"}</span>
+      {/* Caption: two single lines, never wraps */}
+      <div className="mt-4 font-footer-text">
+        <div className="flex items-baseline gap-3 whitespace-nowrap">
+          <span className="hidden shrink-0 text-[0.68rem] tracking-[0.18em] text-white/35 transition-colors duration-500 group-hover/card:text-[#7ce9ff] sm:inline">
+            {card.index}
+          </span>
+          {/* the inner span carries the font: globals.css styles bare h1 to h6 (Syne, text-wrap: balance) unlayered */}
+          <h3 className="m-0 min-w-0 flex-1">
+            <span className="block truncate font-footer-display text-[clamp(0.95rem,1.25vw,1.35rem)] font-medium leading-tight tracking-[-0.03em] text-white">
+              {card.title}
+            </span>
+          </h3>
+          <span className="hidden shrink-0 text-[0.72rem] text-white/45 sm:inline">
+            {card.fromPrice !== null ? `From $${card.fromPrice.toLocaleString("en-US")}` : "Custom"}
+          </span>
         </div>
-        <h3 className="mt-2 flex items-start gap-1.5 font-footer-display text-[clamp(0.95rem,1.05vw,1.15rem)] font-medium leading-[1.12] tracking-[-0.03em] text-white">
-          <span>{card.title}</span>
-          <ArrowUpRightIcon
-            aria-hidden
-            className="mt-[0.15em] size-[0.8em] shrink-0 -translate-x-1 translate-y-1 text-white/0 transition-[translate,color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/card:translate-x-0 group-hover/card:translate-y-0 group-hover/card:text-white/70"
-            strokeWidth={1.75}
-          />
-        </h3>
-        <p className="mt-1 hidden text-[0.75rem] leading-snug text-white/50 line-clamp-2 lg:[display:-webkit-box]">{card.blurb}</p>
+        <p className="mt-1.5 hidden truncate pl-[calc(0.68rem*1.18+0.75rem)] text-[0.75rem] text-white/40 sm:block">
+          {card.tags.join("  ·  ")}
+        </p>
       </div>
     </Link>
   );

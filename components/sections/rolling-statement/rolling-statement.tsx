@@ -1,18 +1,21 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useLenis } from "lenis/react";
 import { cn } from "@/lib/utils";
 import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
 import { rollingStatementContent, type RollingStatementContent } from "./rolling-statement.config";
 
-/** Drum radius: a share of the viewport height, capped in line heights so small type still rolls on phones */
-const DRUM = 0.3;
-const DRUM_LINES = 3.4;
-/** Per line camera distance; lower = stronger widening of tilted lines */
-const PERSPECTIVE = 1400;
-/** Lines fade out over this many radians before they roll out of sight */
-const EDGE_FADE = 0.38;
+/** Cylinder radius in line heights (smaller = rounder, more lines on the curve) */
+const RADIUS_LINES = 2.4;
+/** Cap on the radius as a share of the viewport height */
+const RADIUS_MAX_VH = 0.3;
+/** Camera distance used to shrink lines as they turn away (depth only, no skew, so letters never slant) */
+const CAMERA = 1100;
+/** Lines on the far side of the curve fade by cos(angle)^SHADE */
+const SHADE = 0.9;
+/** Minimum pinned scroll, in viewport heights */
+const MIN_PIN_VH = 0.8;
 const HALF_PI = Math.PI / 2;
 
 type RollingStatementProps = {
@@ -21,73 +24,60 @@ type RollingStatementProps = {
 };
 
 /**
- * The statement rolls over an invisible drum as you scroll: lines come up from below folded flat,
- * straighten out in the middle of the screen and fold away at the top, bunching at both edges like
- * text printed on a cylinder.
+ * The statement is printed on a cylinder that turns as you scroll. The stage pins in the middle of
+ * the screen; lines roll up from under the drum, face you flat at the centre, then roll away over
+ * the top, shrinking and fading with depth.
  *
- * Driven by Lenis: one callback per Lenis frame writes transform and opacity straight to each line
- * (no React state, no layout reads while scrolling; line positions are measured once and on resize).
+ * Driven by Lenis: one callback per Lenis frame writes transform and opacity straight to each line.
+ * No React state, no layout reads while scrolling (sizes are measured on mount and resize).
  */
 export function RollingStatement({ content = rollingStatementContent, className }: RollingStatementProps) {
   const reduce = useReducedMotionSafe();
   const sectionRef = useRef<HTMLElement>(null);
   const lineRefs = useRef<(HTMLSpanElement | null)[]>([]);
-  const geo = useRef({ centers: [] as number[], top: 0, bottom: 0, vh: 0, radius: 0 });
-  const idle = useRef(false);
+  const geo = useRef({ top: 0, vh: 0, lineH: 0, radius: 0, pin: 0, speed: 1 });
   const live = useRef(false);
 
-  /* Line centres in page coordinates (offsets ignore transforms, so this is the flat layout) */
   const measure = useCallback(() => {
     const section = sectionRef.current;
-    if (!section) return;
+    const first = lineRefs.current[0];
+    if (!section || !first) return;
+    const vh = window.innerHeight;
+    const lineH = first.offsetHeight;
+    const radius = Math.min(lineH * RADIUS_LINES, vh * RADIUS_MAX_VH);
+    const travel = Math.PI * radius + (content.lines.length - 1) * lineH; // first line in -> last line out
+    const pin = Math.max(travel - vh, vh * MIN_PIN_VH);
+    section.style.height = `${pin + vh}px`;
     const top = section.getBoundingClientRect().top + window.scrollY;
-    geo.current = {
-      centers: lineRefs.current.map((el) => (el ? top + el.offsetTop + el.offsetHeight / 2 : 0)),
-      top,
-      bottom: top + section.offsetHeight,
-      vh: window.innerHeight,
-      radius: Math.min(window.innerHeight * DRUM, (lineRefs.current[0]?.offsetHeight ?? 0) * DRUM_LINES || Infinity),
-    };
-    idle.current = false;
-  }, []);
+    // The roll starts when the stage is half in view and ends when it is half out.
+    geo.current = { top, vh, lineH, radius, pin, speed: travel / (pin + vh) };
+  }, [content.lines.length]);
 
   const render = useCallback((scroll: number) => {
-    const { centers, top, bottom, vh, radius } = geo.current;
+    const { top, vh, lineH, radius, speed } = geo.current;
     if (!live.current || !vh) return;
-
-    // Far from the viewport: hide everything once, then skip work until it comes back.
-    const near = scroll + vh * 2 > top && scroll - vh < bottom;
-    if (!near) {
-      if (!idle.current) {
-        lineRefs.current.forEach((el) => el && (el.style.opacity = "0"));
-        idle.current = true;
-      }
-      return;
-    }
-    idle.current = false;
-
-    const mid = scroll + vh / 2;
+    const turned = (scroll - top + vh * 0.5) * speed; // how far the drum has turned, in px of text
     lineRefs.current.forEach((el, i) => {
       if (!el) return;
-      const s = centers[i] - mid; // flat distance from the screen centre
-      const angle = s / radius; // position on the drum
-      const away = Math.abs(angle);
-      if (away >= HALF_PI) {
+      const angle = (HALF_PI * radius + i * lineH - turned) / radius; // + below centre, - above
+      if (Math.abs(angle) >= HALF_PI) {
         el.style.opacity = "0";
         return;
       }
-      const shift = radius * Math.sin(angle) - s; // pull the line onto the drum
-      el.style.opacity = String(Math.min(1, (HALF_PI - away) / EDGE_FADE));
-      el.style.transform = `perspective(${PERSPECTIVE}px) translate3d(0,${shift.toFixed(2)}px,0) rotateX(${(-angle).toFixed(4)}rad)`;
+      const cos = Math.cos(angle);
+      const y = radius * Math.sin(angle);
+      const depth = CAMERA / (CAMERA + radius * (1 - cos)); // 1 at the front, smaller towards the edges
+      el.style.opacity = String(Math.pow(cos, SHADE));
+      // rotateX without perspective = clean vertical fold (cos); depth scale makes it read as a cylinder
+      el.style.transform = `translate3d(0,${y.toFixed(2)}px,0) scale(${depth.toFixed(4)}) rotateX(${(-angle).toFixed(4)}rad)`;
     });
   }, []);
 
   const lenis = useLenis((l) => render(l.scroll), [render]);
 
   useEffect(() => {
-    if (reduce) return;
     const section = sectionRef.current;
-    if (!section) return;
+    if (reduce || !section) return;
     live.current = true;
 
     const refresh = (): void => {
@@ -96,9 +86,7 @@ export function RollingStatement({ content = rollingStatementContent, className 
     };
     refresh();
 
-    // Fonts and the pinned sections above can shift the layout after mount.
     const ro = new ResizeObserver(refresh);
-    ro.observe(section);
     ro.observe(document.body);
     window.addEventListener("resize", refresh);
     void document.fonts?.ready.then(refresh);
@@ -109,6 +97,7 @@ export function RollingStatement({ content = rollingStatementContent, className 
 
     return () => {
       live.current = false;
+      section.style.height = "";
       lineRefs.current.forEach((el) => {
         if (!el) return;
         el.style.opacity = "";
@@ -120,46 +109,42 @@ export function RollingStatement({ content = rollingStatementContent, className 
     };
   }, [reduce, lenis, measure, render]);
 
-  return (
-    <section
-      ref={sectionRef}
-      data-atmo="intro"
-      className={cn(
-        "relative overflow-x-clip bg-[#030712] px-[clamp(1.25rem,6vw,8rem)] text-white",
-        reduce ? "py-[clamp(5rem,14vh,9rem)]" : "py-[38svh]",
-        className,
-      )}
-    >
-      <h2 className="sr-only">{content.sentence}</h2>
-      <p
-        aria-hidden
-        className="mx-auto flex flex-col items-center text-center font-signature text-[min(9.2vw,12.5svh,7rem)] font-extrabold leading-[0.94] tracking-[-0.055em]"
-      >
-        {content.lines.map((line, i) => (
-          <span
-            key={i}
-            ref={(el) => {
-              lineRefs.current[i] = el;
-            }}
-            className={cn("block whitespace-nowrap", !reduce && "opacity-0 will-change-transform")}
-          >
-            {renderLine(line)}
-          </span>
-        ))}
-      </p>
-    </section>
-  );
-}
+  const text =
+    "font-footer-display text-[min(8.6vw,11.5svh,6.75rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-white";
 
-/** "*word*" becomes italic */
-function renderLine(line: string) {
-  return line.split(/(\*[^*]+\*)/g).map((part, i) =>
-    part.startsWith("*") && part.endsWith("*") ? (
-      <em key={i} className="pr-[0.04em] italic">
-        {part.slice(1, -1)}
-      </em>
-    ) : (
-      <Fragment key={i}>{part}</Fragment>
-    ),
+  if (reduce) {
+    return (
+      <section data-atmo="intro" className={cn("bg-[#030712] px-[clamp(1.25rem,6vw,8rem)] py-[clamp(5rem,14vh,9rem)]", className)}>
+        <h2 className="sr-only">{content.sentence}</h2>
+        <p aria-hidden className={cn(text, "flex flex-col items-center text-center")}>
+          {content.lines.map((line, i) => (
+            <span key={i} className="block whitespace-nowrap">
+              {line}
+            </span>
+          ))}
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section ref={sectionRef} data-atmo="intro" className={cn("relative h-[220vh] bg-[#030712]", className)}>
+      <h2 className="sr-only">{content.sentence}</h2>
+      <div className="sticky top-0 h-svh overflow-hidden">
+        <p aria-hidden className={cn(text, "absolute inset-x-0 top-1/2 -translate-y-1/2 text-center")}>
+          {content.lines.map((line, i) => (
+            <span
+              key={i}
+              ref={(el) => {
+                lineRefs.current[i] = el;
+              }}
+              className={cn("block whitespace-nowrap opacity-0 will-change-transform", i > 0 && "absolute inset-x-0 top-0")}
+            >
+              {line}
+            </span>
+          ))}
+        </p>
+      </div>
+    </section>
   );
 }

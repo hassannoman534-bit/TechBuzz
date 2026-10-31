@@ -5,9 +5,9 @@ import { PerspectiveRow } from "./perspective-row";
 import { ServiceCard } from "./service-card";
 import { buildShowcaseCards, showcaseContent, type ShowcaseContent } from "./services-showcase.config";
 
-/** Grid width: small cards like the reference, so several rows roll through the screen at once.
+/** Grid width: two large cards per row, one row in focus at a time.
  * Inline (not a Tailwind arbitrary class) so it can never be dropped by the class scanner. */
-const GRID_WIDTH = "min(100%, clamp(19rem, 26vw, 30rem))";
+const GRID_WIDTH = "min(100%, clamp(20rem, min(44vw, 82svh), 50rem))";
 
 type ServicesShowcaseProps = { content?: ShowcaseContent; className?: string };
 
@@ -42,10 +42,10 @@ export function ServicesShowcase({ content = showcaseContent, className }: Servi
         <span aria-hidden className="mt-4 h-[clamp(3rem,9vh,5rem)] w-px bg-gradient-to-b from-white/30 to-white/0" />
       </div>
 
-      {/* in this page, the hovered card stays bright and the others step back (desktop only) */}
+      {/* the hovered card stays bright and the others step back (desktop only) */}
       <div
         className={cn(
-          "mx-auto mt-[clamp(1.5rem,4vh,3rem)] flex w-full flex-col gap-y-[clamp(3rem,11vh,6.5rem)]",
+          "mx-auto mt-[clamp(1.5rem,4vh,3rem)] flex w-full flex-col gap-y-[clamp(4rem,18vh,11rem)]",
           "[@media(hover:hover)_and_(pointer:fine)]:[&:has([data-svc]:hover)_[data-svc]:not(:hover)]:opacity-45",
         )}
         style={{ maxWidth: GRID_WIDTH }}
