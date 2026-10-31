@@ -66,6 +66,10 @@ export function TunnelHero({ content = tunnelHeroContent, length = 300, backgrou
 
   const apply = (p: number): void => {
     const travel = reduce ? TRAVEL * 0.35 : p * TRAVEL;
+    // Cards begin fully hidden and reveal as the scroll starts, so the corridor fades in only
+    // on scroll (not at rest). Under reduced motion the corridor is frozen mid-flight, so it
+    // must stay visible — skip the gate there.
+    const reveal = reduce ? 1 : Math.min(1, Math.max(0, p / 0.08));
     slots.current.forEach((s, i) => {
       const el = cards.current[i];
       if (!el) return;
@@ -73,7 +77,7 @@ export function TunnelHero({ content = tunnelHeroContent, length = 300, backgrou
       // fade in from the deep fog, fade out just before passing the camera
       const fadeIn = Math.min(1, Math.max(0, (z - (FAR - 300)) / 900));
       const fadeOut = Math.min(1, Math.max(0, (P * 0.78 - z) / 380));
-      const o = Math.min(fadeIn, fadeOut);
+      const o = Math.min(fadeIn, fadeOut) * reveal;
       if (o <= 0.001) {
         el.style.visibility = "hidden";
         return;
@@ -82,10 +86,10 @@ export function TunnelHero({ content = tunnelHeroContent, length = 300, backgrou
       el.style.opacity = o.toFixed(3);
       el.style.transform = `translate3d(${s.x.toFixed(1)}px, ${s.y.toFixed(1)}px, ${z.toFixed(1)}px) rotateY(${s.ry.toFixed(2)}deg) rotateX(${s.rx.toFixed(2)}deg) rotateZ(${s.rz}deg)`;
     });
+    // Headline stays fully visible the whole way through — no end-of-scroll fade or z-push.
     if (title.current) {
-      const k = Math.min(1, Math.max(0, (p - 0.78) / 0.2));
-      title.current.style.opacity = (1 - k * 0.92).toFixed(3);
-      title.current.style.transform = `translateZ(${(k * 120).toFixed(1)}px)`;
+      title.current.style.opacity = "1";
+      title.current.style.transform = "translateZ(0px)";
     }
     if (cue.current) cue.current.style.opacity = Math.max(0, 1 - p * 8).toFixed(3);
   };
