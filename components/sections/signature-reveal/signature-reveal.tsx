@@ -127,9 +127,11 @@ type SignatureRevealProps = {
   /** Section height in vh. Scroll distance = length − 100. */
   length?: number;
   className?: string;
+  /** Show the small intro line at the top of the stage. Off when RollingStatement plays the same text before this section. */
+  showIntro?: boolean;
 };
 
-export function SignatureReveal({ content = signatureRevealContent, length = 600, className }: SignatureRevealProps) {
+export function SignatureReveal({ content = signatureRevealContent, length = 600, className, showIntro = true }: SignatureRevealProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const letterRef = useRef<HTMLSpanElement>(null);
@@ -208,12 +210,14 @@ export function SignatureReveal({ content = signatureRevealContent, length = 600
         {content.quote && <p className="sr-only">{content.quote}</p>}
 
         {/* Intro line */}
-        <motion.p
-          style={{ opacity: introOpacity, y: introY }}
-          className="absolute inset-x-0 top-[13svh] z-20 mx-auto max-w-[34ch] px-6 text-center font-signature text-[clamp(0.95rem,1.25vw,1.15rem)] font-medium leading-snug tracking-[-0.01em] text-ink"
-        >
-          {content.intro}
-        </motion.p>
+        {showIntro && (
+          <motion.p
+            style={{ opacity: introOpacity, y: introY }}
+            className="absolute inset-x-0 top-[13svh] z-20 mx-auto max-w-[34ch] px-6 text-center font-signature text-[clamp(0.95rem,1.25vw,1.15rem)] font-medium leading-snug tracking-[-0.01em] text-ink"
+          >
+            {content.intro}
+          </motion.p>
+        )}
 
         {/* Word + lockup */}
         <motion.div
