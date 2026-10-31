@@ -10,11 +10,11 @@ import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
  * Rows enter tilted back, pushed outward, enlarged, blurred and dark, settle flat in the middle
  * band, then tilt forward and fan out again on the way up.
  */
-const T = [0, 0.36, 0.64, 1];
-const ROTATE_X = [26, 0, 0, -26]; // deg
+const T = [0, 0.4, 0.6, 1];
+const ROTATE_X = [34, 0, 0, -34]; // deg
 const ROTATE_Z = [4, 0, 0, -4]; // deg, mirrored per column
-const SHIFT_X = [16, 0, 0, 16]; // % of card width, outward
-const SCALE = [1.16, 1, 1, 1.16];
+const SHIFT_X = [18, 0, 0, 18]; // % of card width, outward
+const SCALE = [1.18, 1, 1, 1.18];
 const BLUR = [9, 0, 0, 9]; // px
 const SHADE = [0.75, 0, 0, 0.75]; // dark veil
 const FADE = [0, 1, 1, 0];
@@ -34,7 +34,8 @@ export function PerspectiveRow({ children }: PerspectiveRowProps) {
   return (
     <div
       ref={ref}
-      className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-[clamp(0.9rem,2.6vw,2.75rem)] [perspective:1100px]"
+      className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-[clamp(0.9rem,2.6vw,2.75rem)]"
+      style={{ perspective: 900 }}
     >
       {children.map((child, i) => (
         <PerspectiveCell key={i} progress={scrollYProgress} side={i === 0 ? -1 : 1} still={reduce}>

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRef, type PointerEvent } from "react";
 import { motion, useMotionTemplate, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { ArrowUpRightIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useFinePointer } from "@/lib/use-fine-pointer";
 import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
 import { ServiceArt } from "./service-art";
@@ -131,12 +130,12 @@ export function ServiceCard({ card, href, priority = false }: ServiceCardProps) 
       </motion.div>
 
       {/* Caption */}
-      <div className="mt-4 font-footer-text">
+      <div className="mt-3 font-footer-text">
         <div className="flex items-baseline justify-between gap-3 text-[0.68rem] uppercase tracking-[0.2em] text-white/40">
           <span className="transition-colors duration-500 group-hover/card:text-[#7ce9ff]">{card.index}</span>
           <span className="hidden sm:inline">{card.fromPrice !== null ? `From $${card.fromPrice.toLocaleString("en-US")}` : "Custom"}</span>
         </div>
-        <h3 className="mt-2 flex items-start gap-1.5 font-footer-display text-[clamp(1rem,1.35vw,1.35rem)] font-medium leading-[1.12] tracking-[-0.03em] text-white">
+        <h3 className="mt-2 flex items-start gap-1.5 font-footer-display text-[clamp(0.95rem,1.05vw,1.15rem)] font-medium leading-[1.12] tracking-[-0.03em] text-white">
           <span>{card.title}</span>
           <ArrowUpRightIcon
             aria-hidden
@@ -144,20 +143,7 @@ export function ServiceCard({ card, href, priority = false }: ServiceCardProps) 
             strokeWidth={1.75}
           />
         </h3>
-        <p className="mt-1.5 hidden text-[0.8rem] leading-relaxed text-white/50 sm:block">{card.blurb}</p>
-        <ul className="mt-3 hidden flex-wrap gap-1.5 md:flex">
-          {card.tags.map((tag) => (
-            <li
-              key={tag}
-              className={cn(
-                "rounded-full bg-white/[0.03] px-2.5 py-1 text-[0.68rem] text-white/55 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]",
-                "transition-colors duration-500 group-hover/card:text-white/80",
-              )}
-            >
-              {tag}
-            </li>
-          ))}
-        </ul>
+        <p className="mt-1 hidden text-[0.75rem] leading-snug text-white/50 line-clamp-2 lg:[display:-webkit-box]">{card.blurb}</p>
       </div>
     </Link>
   );
