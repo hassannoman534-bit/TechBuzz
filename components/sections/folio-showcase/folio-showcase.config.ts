@@ -30,6 +30,8 @@ export type FolioChapterConfig = {
 export type FolioShowcaseContent = {
   /** Folder under /public that holds the downloader output */
   root: string;
+  /** Folder under /public holding one background image per folio, named by its label (e.g. "Creative Designs.jpg", "Webfolio.jpg") */
+  backgroundRoot: string;
   eyebrow: string;
   chapters: FolioChapterConfig[];
   /** Chapter ids in the order they claim images (specific rules first) */
@@ -42,6 +44,7 @@ export type FolioShowcaseContent = {
 
 export const folioContent: FolioShowcaseContent = {
   root: "assets/folio",
+  backgroundRoot: "assets/BG folios",
   eyebrow: "The folios",
   chapters: [
     { id: "creative", title: ["Creative", "Designs"], caption: "Logos and brand creatives", match: { pages: ["portfolio-page-2"], sections: ["logo", "creative"] } },

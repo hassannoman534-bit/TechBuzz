@@ -84,9 +84,15 @@ export function FolioChapter({ chapter, index, total }: FolioChapterProps) {
   return (
     <section ref={sectionRef} aria-label={label} className="relative" style={{ height: `${LENGTH_VH}vh` }}>
       <div className="sticky top-0 h-svh overflow-hidden bg-[#030712]">
-        {/* soft backdrop: the cover, huge and dim, gone once the card fills the screen */}
+        {/* soft backdrop: this folio's background (or the cover), huge and dim, gone once the card fills the screen */}
         <motion.div aria-hidden style={{ opacity: bgOpacity }} className="absolute inset-0">
-          <Image src={chapter.cover} alt="" fill sizes="100vw" className="scale-125 object-cover opacity-[0.18]" />
+          <Image
+            src={chapter.background ?? chapter.cover}
+            alt=""
+            fill
+            sizes="100vw"
+            className={chapter.background ? "scale-110 object-cover object-center opacity-[0.32]" : "scale-125 object-cover opacity-[0.18]"}
+          />
           <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_50%,transparent,#030712_85%)]" />
         </motion.div>
 

@@ -7,6 +7,8 @@ export type FolioChapterData = {
   title: [string, string];
   caption: string;
   cover: string;
+  /** Full-bleed background for this folio (from backgroundRoot, named by label), or null to fall back to the cover */
+  background: string | null;
   images: string[];
   count: number;
 };
@@ -77,7 +79,22 @@ function matches(rule: FolioRule, row: Row): boolean {
 }
 
 const toUrl = (root: string, file: string): string =>
-  `/${root}/${file.split("/").map(encodeURIComponent).join("/")}`;
+  "/" + [...root.split("/"), ...file.split("/")].map(encodeURIComponent).join("/");
+
+/** Display label, built the same way the chapter renders it: "Web" + "folio" -> "Webfolio", else space-joined. */
+const chapterLabel = (title: [string, string]): string =>
+  `${title[0]}${title[1].startsWith("folio") ? "" : " "}${title[1]}`;
+
+/** Background image for a folio: a file in backgroundRoot whose name (minus extension) equals the folio label. */
+function resolveBackground(root: string, label: string): string | null {
+  const dir = path.join(process.cwd(), "public", root);
+  if (!fs.existsSync(dir)) return null;
+  const want = label.toLowerCase();
+  const hit = fs
+    .readdirSync(dir)
+    .find((f) => IMAGE.test(f) && f.slice(0, f.lastIndexOf(".")).toLowerCase() === want);
+  return hit ? toUrl(root, hit) : null;
+}
 
 /**
  * Sorts every downloaded image into a folio chapter. Runs on the server at build time
@@ -107,6 +124,7 @@ export function loadFolioChapters(content: FolioShowcaseContent): FolioChapterDa
         title: c.title,
         caption: c.caption,
         cover: toUrl(content.root, coverRow.file),
+        background: resolveBackground(content.backgroundRoot, chapterLabel(c.title)),
         images: rest.slice(0, content.stripLimit).map((r) => toUrl(content.root, r.file)),
         count: list.length,
       },
