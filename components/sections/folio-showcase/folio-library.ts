@@ -2,14 +2,17 @@ import fs from "node:fs";
 import path from "node:path";
 import type { FolioChapterConfig, FolioRule, FolioShowcaseContent } from "./folio-showcase.config";
 
+export type FolioImage = { src: string; /** logos are shown whole, not cropped */ fit: "cover" | "contain" };
+
 export type FolioChapterData = {
   id: string;
   title: [string, string];
   caption: string;
-  cover: string;
-  /** Full-bleed background for this folio (from backgroundRoot, named by label), or null to fall back to the cover */
-  background: string | null;
-  images: string[];
+  /** The growing card */
+  cover: FolioImage;
+  /** Big dim image behind the card (same as the cover unless key art is set) */
+  backdrop: string;
+  images: FolioImage[];
   count: number;
 };
 
@@ -79,22 +82,7 @@ function matches(rule: FolioRule, row: Row): boolean {
 }
 
 const toUrl = (root: string, file: string): string =>
-  "/" + [...root.split("/"), ...file.split("/")].map(encodeURIComponent).join("/");
-
-/** Display label, built the same way the chapter renders it: "Web" + "folio" -> "Webfolio", else space-joined. */
-const chapterLabel = (title: [string, string]): string =>
-  `${title[0]}${title[1].startsWith("folio") ? "" : " "}${title[1]}`;
-
-/** Background image for a folio: a file in backgroundRoot whose name (minus extension) equals the folio label. */
-function resolveBackground(root: string, label: string): string | null {
-  const dir = path.join(process.cwd(), "public", root);
-  if (!fs.existsSync(dir)) return null;
-  const want = label.toLowerCase();
-  const hit = fs
-    .readdirSync(dir)
-    .find((f) => IMAGE.test(f) && f.slice(0, f.lastIndexOf(".")).toLowerCase() === want);
-  return hit ? toUrl(root, hit) : null;
-}
+  `/${root}/${file.split("/").map(encodeURIComponent).join("/")}`;
 
 /**
  * Sorts every downloaded image into a folio chapter. Runs on the server at build time
@@ -113,19 +101,47 @@ export function loadFolioChapters(content: FolioShowcaseContent): FolioChapterDa
     if (chapter) byId.get(chapter.id)?.push(row);
   }
 
+  const fitOf = (row: Row): FolioImage["fit"] =>
+    content.logoSections.some((w) => row.section.toLowerCase().includes(w)) ? "contain" : "cover";
+  const image = (row: Row): FolioImage => ({ src: toUrl(content.root, row.file), fit: fitOf(row) });
+  const artExists = (art?: string): art is string =>
+    Boolean(art && fs.existsSync(path.join(process.cwd(), "public", decodeURIComponent(art))));
+
   return content.chapters.flatMap((c) => {
     const list = byId.get(c.id) ?? [];
-    if (!list.length) return [];
-    const coverRow = (c.cover && list.find((r) => r.file.endsWith(c.cover as string))) || list[0];
+    const hasArt = artExists(c.art);
+    if (!list.length && !hasArt) return [];
+
+    if (hasArt) {
+      const art = c.art as string;
+      return [
+        {
+          id: c.id,
+          title: c.title,
+          caption: c.caption,
+          cover: { src: art, fit: "cover" as const },
+          backdrop: art,
+          images: list.slice(0, content.stripLimit).map(image),
+          count: list.length,
+        },
+      ];
+    }
+
+    // No key art: the best non logo image becomes the cover (a cropped logo makes a poor cover).
+    const coverRow =
+      (c.cover && list.find((r) => r.file.endsWith(c.cover as string))) ||
+      list.find((r) => fitOf(r) === "cover") ||
+      list[0];
     const rest = list.filter((r) => r !== coverRow);
+    const cover = image(coverRow);
     return [
       {
         id: c.id,
         title: c.title,
         caption: c.caption,
-        cover: toUrl(content.root, coverRow.file),
-        background: resolveBackground(content.backgroundRoot, chapterLabel(c.title)),
-        images: rest.slice(0, content.stripLimit).map((r) => toUrl(content.root, r.file)),
+        cover,
+        backdrop: cover.src,
+        images: rest.slice(0, content.stripLimit).map(image),
         count: list.length,
       },
     ];

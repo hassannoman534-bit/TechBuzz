@@ -23,15 +23,18 @@ export type FolioChapterConfig = {
   caption: string;
   /** First matching rule wins (chapters are matched in `matchOrder`, shown in array order) */
   match: FolioRule;
-  /** Optional cover file name (as in the folder). Default: the first image. */
+  /** Optional cover file name (as in the folder). Default: the first image. Ignored when `art` is set. */
   cover?: string;
+  /**
+   * Generated key art (public path). Used for the growing card AND the backdrop behind it; all downloaded
+   * images then go to the film strip. Missing file = falls back to the first downloaded image.
+   */
+  art?: string;
 };
 
 export type FolioShowcaseContent = {
   /** Folder under /public that holds the downloader output */
   root: string;
-  /** Folder under /public holding one background image per folio, named by its label (e.g. "Creative Designs.jpg", "Webfolio.jpg") */
-  backgroundRoot: string;
   eyebrow: string;
   chapters: FolioChapterConfig[];
   /** Chapter ids in the order they claim images (specific rules first) */
@@ -40,15 +43,16 @@ export type FolioShowcaseContent = {
   ignoreSections: string[];
   /** Max images in each chapter's film strip */
   stripLimit: number;
+  /** Sections whose images are logos: shown whole (contained, padded) instead of cropped */
+  logoSections: string[];
 };
 
 export const folioContent: FolioShowcaseContent = {
   root: "assets/folio",
-  backgroundRoot: "assets/BG folios",
   eyebrow: "The folios",
   chapters: [
-    { id: "creative", title: ["Creative", "Designs"], caption: "Logos and brand creatives", match: { pages: ["portfolio-page-2"], sections: ["logo", "creative"] } },
-    { id: "smm", title: ["SMM", "Creatives"], caption: "UGC, AI and paid ads", match: { pages: ["portfolio-page-3"], sections: ["ugc", "ai-marketing", "google-ads", "smm"] } },
+    { id: "creative", title: ["Creative", "Designs"], caption: "Logos and brand creatives", art: "/assets/folio/covers/creative.webp", match: { pages: ["portfolio-page-2"], sections: ["logo", "creative"] } },
+    { id: "smm", title: ["SMM", "Creatives"], caption: "UGC, AI and paid ads", art: "/assets/folio/covers/smm.webp", match: { pages: ["portfolio-page-3"], sections: ["ugc", "ai-marketing", "google-ads", "smm"] } },
     { id: "shoot", title: ["Shoot", "folio"], caption: "Food, product and corporate shoots", match: { sections: ["shoot"] } },
     { id: "web", title: ["Web", "folio"], caption: "Website designs", match: { pages: ["portfolio-page-4"], sections: ["webfolio", "web-design", "website"] } },
     { id: "seo", title: ["SEO", "Results"], caption: "Rankings, traffic and leads", match: { pages: ["portfolio-page-5"], sections: ["seo"] } },
@@ -57,4 +61,5 @@ export const folioContent: FolioShowcaseContent = {
   matchOrder: ["shoot", "creative", "smm", "web", "seo", "yt"],
   ignoreSections: ["our-clients", "what-we-do", "imagine", "founder", "director", "vision", "about", "backgrounds", "contact", "our-services"],
   stripLimit: 14,
+  logoSections: ["logo"],
 };
