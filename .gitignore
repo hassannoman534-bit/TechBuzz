@@ -42,3 +42,4 @@ next-env.d.ts
 
 # local scripts
 fetch_techbuzz_assets
+techbuzz_portfolio_downloader
