@@ -6,12 +6,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, ChevronDown, Sparkles, LayoutGrid, Tag, Users, PenLine, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LiquidGlassCard from "@/components/ui/LiquidGlassCard";
 import { GlassButton } from "@/components/ui/GlassButton";
 import { MetalButton } from "@/components/ui/MetalButton";
 import { USE_METAL_BUTTONS } from "@/lib/feature-flags";
+import { LiquidNavbar, NimbusIcons, type LiquidNavItem } from "@/components/ui/liquid-glass-navbar";
 
 /* ─── Nav data ───────────────────────────────────────────────────────────── */
 
@@ -32,11 +33,23 @@ const ABOUT_LINKS = [
   { label: "Message From CEO", href: "/message-from-ceo" },
 ];
 
+/* Desktop water pill: same order as NAV_LINKS. About has no href, it opens the dropdown. */
+const ICON = { size: 18, strokeWidth: 1.8 } as const;
+const NAV_ITEMS: LiquidNavItem[] = [
+  { label: "Home",      href: "/",          icon: NimbusIcons.home,       fx: "glow" },
+  { label: "Services",  href: "/services",  icon: <Sparkles {...ICON} />,  fx: "spin" },
+  { label: "Portfolio", href: "/portfolio", icon: <LayoutGrid {...ICON} />, fx: "pop" },
+  { label: "Pricing",   href: "/pricing",   icon: <Tag {...ICON} />,       fx: "wave" },
+  { label: "About",                         icon: <Users {...ICON} />,     fx: "pop" },
+  { label: "Blog",      href: "/blog",      icon: <PenLine {...ICON} />,   fx: "wave" },
+  { label: "Contact",   href: "/contact",   icon: <Send {...ICON} />,      fx: "plane" },
+];
+const ABOUT_INDEX = NAV_ITEMS.findIndex((i) => i.label === "About");
+
 /* ─── Navbar ─────────────────────────────────────────────────────────────── */
 
 export default function Navbar() {
   const pathname      = usePathname();
-  const [hoveredLink, setHoveredLink] = useState<string | null>(null);
   const [scrolled,    setScrolled]    = useState(false);
   const [mobileOpen,  setMobileOpen]  = useState(false);
   const [mounted,     setMounted]     = useState(false);
@@ -45,7 +58,7 @@ export default function Navbar() {
   const [aboutOpen,       setAboutOpen]       = useState(false);
   const [aboutMobileOpen, setAboutMobileOpen] = useState(false);
   const [aboutPos,        setAboutPos]        = useState<{ top: number; left: number } | null>(null);
-  const aboutTriggerRef = useRef<HTMLButtonElement>(null);
+  const aboutTriggerRef = useRef<HTMLElement | null>(null);
   const aboutCloseTimer = useRef<number | undefined>(undefined);
   const aboutJustClosed = useRef(false); // guards the Escape-refocus from reopening via onFocus
 
@@ -102,6 +115,12 @@ export default function Navbar() {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
+  /* Which pill item holds the water drop (-1 = route not in the menu, no drop) */
+  const aboutRouteActive = ABOUT_LINKS.some((l) => isActive(l.href));
+  const activeIndex = aboutRouteActive
+    ? ABOUT_INDEX
+    : NAV_ITEMS.findIndex((item) => item.href !== undefined && isActive(item.href));
+
   /* Liquid glass params shift subtly on scroll */
   const strength   = scrolled ? 110 : 80;
   const brightness = scrolled ? 1.2  : 1.1;
@@ -127,7 +146,7 @@ export default function Navbar() {
             pointerEvents: "auto",
             width:         "auto",
             minWidth:      "min(560px, calc(100vw - 32px))",
-            maxWidth:      "800px",
+            maxWidth:      "min(1120px, calc(100vw - 32px))",
             borderRadius:  "22px",
           }}
         >
@@ -179,92 +198,30 @@ export default function Navbar() {
                 />
               </Link>
 
-              {/* Desktop nav links */}
-              <nav
-                className="hidden lg:flex"
-                style={{
-                  alignItems: "center",
-                  gap:        "2px",
-                  position:   "relative",
-                }}
-                onMouseLeave={() => setHoveredLink(null)}
-                aria-label="Main navigation"
-              >
-                {NAV_LINKS.map((link) => {
-                  const active   = isActive(link.href);
-                  const hovered  = hoveredLink === link.label;
-                  const isAbout  = link.label === "About";
-                  const aboutActive = isAbout && ABOUT_LINKS.some((l) => isActive(l.href));
-                  const lit      = active || hovered || aboutActive;
-
-                  const linkStyle = {
-                    display:        "block",
-                    padding:        "0.35rem 0.8rem",
-                    borderRadius:   "10px",
-                    fontSize:       "0.875rem",
-                    fontWeight:     500,
-                    letterSpacing:  "0.01em",
-                    color:          lit ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.58)",
-                    textDecoration: "none",
-                    transition:     "color 0.15s ease",
-                    whiteSpace:     "nowrap",
-                  } as const;
-
-                  return (
-                    <div
-                      key={link.href}
-                      style={{ position: "relative" }}
-                      onMouseEnter={() => { setHoveredLink(link.label); if (isAbout) openAbout(); }}
-                      onMouseLeave={isAbout ? closeAbout : undefined}
-                    >
-                      {/* Sliding liquid glass pill highlight */}
-                      <AnimatePresence>
-                        {hovered && (
-                          <motion.span
-                            layoutId="nav-pill"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0, transition: { duration: 0.15 } }}
-                            transition={{ type: "spring", stiffness: 450, damping: 32 }}
-                            style={{
-                              position:      "absolute",
-                              inset:          0,
-                              borderRadius:  "10px",
-                              background:    "rgba(255,255,255,0.11)",
-                              boxShadow:     "inset 0 0.5px 0 rgba(255,255,255,0.30), 0 1px 4px rgba(0,0,0,0.25)",
-                              zIndex:         0,
-                              pointerEvents: "none",
-                            }}
-                          />
-                        )}
-                      </AnimatePresence>
-
-                      <motion.div
-                        whileTap={{ scale: 0.91 }}
-                        style={{ position: "relative", zIndex: 1 }}
-                      >
-                        {isAbout ? (
-                          <button
-                            ref={aboutTriggerRef}
-                            type="button"
-                            aria-haspopup="menu"
-                            aria-expanded={aboutOpen}
-                            onFocus={openAbout}
-                            onClick={() => (aboutOpen ? setAboutOpen(false) : openAbout())}
-                            style={{ ...linkStyle, background: "transparent", border: "none", cursor: "pointer", font: "inherit", color: linkStyle.color }}
-                          >
-                            {link.label}
-                          </button>
-                        ) : (
-                          <Link href={link.href} style={linkStyle}>
-                            {link.label}
-                          </Link>
-                        )}
-                      </motion.div>
-                    </div>
-                  );
-                })}
-              </nav>
+              {/* Desktop nav: liquid water pill (labels collapse to icons below 1280px) */}
+              <div className="hidden lg:block">
+                <LiquidNavbar
+                  tone="dark"
+                  glass={false}
+                  items={NAV_ITEMS}
+                  active={activeIndex}
+                  expanded={{ [ABOUT_INDEX]: aboutOpen }}
+                  onSelect={(i, _item, el) => {
+                    if (i !== ABOUT_INDEX) return setAboutOpen(false);
+                    aboutTriggerRef.current = el;
+                    if (aboutOpen) setAboutOpen(false);
+                    else openAbout();
+                  }}
+                  onItemEnter={(i, el) => {
+                    if (i !== ABOUT_INDEX) return;
+                    aboutTriggerRef.current = el;
+                    openAbout();
+                  }}
+                  onItemLeave={(i) => {
+                    if (i === ABOUT_INDEX) closeAbout();
+                  }}
+                />
+              </div>
 
               {/* Right — CTA + hamburger */}
               <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", flexShrink: 0 }}>
