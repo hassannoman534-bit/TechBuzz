@@ -4,13 +4,13 @@ import { useCallback, useMemo, useReducer, useRef, useState } from "react";
 import { AnimatePresence, motion, useInView } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
-import { ServiceNav } from "./service-nav";
-import { PackageCard } from "./package-card";
-import { AddonRow } from "./addon-row";
-import { BundleBanner } from "./bundle-banner";
+import { CheckoutDrawer } from "./checkout-drawer";
 import { EnquiryPanel, type EnquiryForm, type SubmitStatus } from "./enquiry-panel";
-import { MobileCart } from "./mobile-cart";
-import { addonKey, buildCart, discountForIndex, emptyState, money, pricingReducer, slotKey, type CartSummary } from "./pricing-logic";
+import { FolderShelf } from "./folder-shelf";
+import { SelectionBar } from "./selection-bar";
+import { ServiceDialog } from "./service-dialog";
+import { pricingCopy } from "./pricing-folders.config";
+import { buildCart, discountForIndex, emptyState, money, pricingReducer, type CartSummary } from "./pricing-logic";
 import { emailConfig, pricingContent, type PricingContent } from "./pricing.config";
 
 type PricingConfiguratorProps = { content?: PricingContent; className?: string };
@@ -45,37 +45,28 @@ function emailParams(form: EnquiryForm, cart: CartSummary): Record<string, strin
 }
 
 /**
- * Pricing configurator (all data from the current pricing page):
- * services on the left, packages and add-ons in the middle, details + live total on the right.
- * Bundle discount by pick order (2nd service 20% off, 3rd and later 50% off), add-ons at full price.
- * Enquiries go out through the same EmailJS template as the current site.
+ * Pricing page, folder edition: the eight services sit on one screen as glass folders. Hover a folder to
+ * see its packages peek out, click it to open the service (packages, tabs, add-ons). A floating plan bar
+ * keeps the live total and opens the checkout (details + summary + Send). Same data, discount rules and
+ * EmailJS template as the current site.
  */
 export function PricingConfigurator({ content = pricingContent, className }: PricingConfiguratorProps) {
   const reduce = useReducedMotionSafe();
   const [state, dispatch] = useReducer(pricingReducer, emptyState);
-  const [active, setActive] = useState(0);
-  const [subBySvc, setSubBySvc] = useState<Record<number, number>>({});
+  const [service, setService] = useState<number | null>(null);
+  const [checkout, setCheckout] = useState(false);
   const [form, setForm] = useState<EnquiryForm>(emptyForm);
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [sent, setSent] = useState<{ form: EnquiryForm; cart: CartSummary } | null>(null);
-  const [sheet, setSheet] = useState(false);
 
   const section = useRef<HTMLElement>(null);
   const inView = useInView(section, { amount: 0.05 });
 
   const cart = useMemo(() => buildCart(content, state), [content, state]);
-  const order = state.order.filter((k) => state.picked[k] !== undefined);
-  const nextDiscount = discountForIndex(order.length, content.discount);
-  const selectedSvcs = useMemo(() => new Set(order.map((k) => Number(k.split("-")[0]))), [order]);
-
-  const svc = content.services[active];
-  const subIndex = subBySvc[active] ?? 0;
-  const sub = svc.subs[subIndex];
-  const key = slotKey(active, subIndex);
-  const pickedHere = state.picked[key];
-  const slotPos = order.indexOf(key);
-  // discount this slot has (already picked) or would get (next in line)
-  const slotDiscount = discountForIndex(slotPos >= 0 ? slotPos : order.length, content.discount);
+  const picks = state.order.filter((k) => state.picked[k] !== undefined).length;
+  const nextDiscount = discountForIndex(picks, content.discount);
+  const t1 = Math.round(content.discount.tier1 * 100);
+  const t2 = Math.round(content.discount.tier2 * 100);
 
   const submit = useCallback(async () => {
     setStatus("sending");
@@ -94,169 +85,80 @@ export function PricingConfigurator({ content = pricingContent, className }: Pri
     setForm(emptyForm);
     setSent(null);
     setStatus("idle");
+    setCheckout(false);
   }, []);
 
-  const panel = (
-    <EnquiryPanel cart={cart} form={form} onForm={setForm} status={status} sent={sent} onSubmit={submit} onNew={startNew} dispatch={dispatch} />
-  );
-
-  // Switching service or tab starts the middle column at the top.
-  const centerScroll = useRef<HTMLDivElement>(null);
-  const pickService = useCallback((i: number) => {
-    setActive(i);
-    centerScroll.current?.scrollTo({ top: 0 });
+  const closeService = useCallback(() => setService(null), []);
+  const closeCheckout = useCallback(() => setCheckout(false), []);
+  const review = useCallback(() => {
+    setService(null);
+    setCheckout(true);
   }, []);
-
-  const panelBox =
-    "rounded-[22px] bg-white/[0.02] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)]";
-  /** each desktop column fills the screen height and scrolls on its own */
-  const colScroll =
-    "lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain [scrollbar-width:thin] [scrollbar-color:rgb(255_255_255/0.14)_transparent]";
 
   return (
     <section
       ref={section}
       id="pricing"
+      data-atmo="pricing"
       aria-labelledby="pricing-title"
       className={cn(
-        "relative bg-[#030712] px-[clamp(0.75rem,2.2vw,2.5rem)] pb-[clamp(5rem,12vh,8rem)] pt-[calc(var(--nav-offset,5.5rem)+1rem)] text-white",
-        // desktop: one full screen app panel, nothing cut off
-        "lg:flex lg:h-svh lg:min-h-[38rem] lg:flex-col lg:pb-4",
+        "relative bg-[#030712] px-[clamp(1rem,4vw,5rem)] pb-[clamp(7rem,14vh,9rem)] pt-[calc(var(--nav-offset,5.5rem)+clamp(0.25rem,2vh,1.5rem))] text-white lg:min-h-svh",
         className,
       )}
     >
-      <h1 id="pricing-title" className="sr-only">
-        Pricing
-      </h1>
-
-      <motion.div
-        initial={reduce ? false : { opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.9, ease: EASE, delay: 0.1 }}
-        className="mx-auto flex w-full max-w-[96rem] flex-col gap-3 lg:min-h-0 lg:flex-1"
-      >
-        <BundleBanner content={content} state={state} />
-
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:min-h-0 lg:flex-1 lg:grid-rows-[minmax(0,1fr)] lg:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)_19.5rem] 2xl:grid-cols-[16.5rem_minmax(0,1fr)_21rem]">
-          {/* services */}
-          <aside className={cn("min-w-0 lg:rounded-[22px] lg:bg-white/[0.02] lg:p-3 lg:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)]", colScroll)} data-lenis-prevent>
-            <ServiceNav services={content.services} active={active} selected={selectedSvcs} nextDiscount={nextDiscount} onSelect={pickService} />
-          </aside>
-
-          {/* packages + add-ons: header stays, content scrolls */}
-          <div className={cn("flex min-w-0 flex-col lg:min-h-0", panelBox)}>
-            <div className="shrink-0 border-b border-white/[0.06] px-[clamp(1rem,1.6vw,1.5rem)] pb-3 pt-4">
-              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                <div className="flex items-baseline gap-3">
-                  <h2 className="font-footer-display text-[clamp(1.25rem,1.6vw,1.6rem)] font-medium tracking-[-0.03em]">{svc.label}</h2>
-                  <span className="text-[0.78rem] text-white/45">Select a package</span>
-                </div>
-                {pickedHere !== undefined && <p className="text-[0.75rem] text-white/45">Click the selected package again to remove it</p>}
-              </div>
-
-              {svc.subs.length > 1 && (
-                <div role="tablist" aria-label={`${svc.label} options`} className="mt-3 flex flex-wrap gap-1.5">
-                  {svc.subs.map((s, i) => {
-                    const on = i === subIndex;
-                    const has = state.picked[slotKey(active, i)] !== undefined;
-                    return (
-                      <button
-                        key={s.label}
-                        type="button"
-                        role="tab"
-                        aria-selected={on}
-                        onClick={() => {
-                          setSubBySvc((m) => ({ ...m, [active]: i }));
-                          centerScroll.current?.scrollTo({ top: 0 });
-                        }}
-                        className={cn(
-                          "relative isolate rounded-full px-3.5 py-1.5 text-[0.8rem] font-medium outline-none transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-[#7b61ff]/70",
-                          on ? "text-white" : "text-white/55 ring-1 ring-white/10 hover:text-white",
-                        )}
-                      >
-                        {on && (
-                          <motion.span
-                            layoutId="pricing-sub-active"
-                            transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                            className="absolute inset-0 -z-10 rounded-full bg-[linear-gradient(120deg,#7b61ff,#5b7cff)]"
-                          />
-                        )}
-                        {s.label}
-                        {has && <span className="ml-1.5 inline-block size-1.5 rounded-full bg-[#22d8ff] align-middle" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+      <FolderShelf
+        content={content}
+        state={state}
+        onOpen={setService}
+        reservedPx={330}
+        header={
+          <motion.header
+            initial={reduce ? false : { opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: EASE }}
+            className="mb-[clamp(1.25rem,4vh,2.75rem)] flex flex-col gap-3 md:flex-row md:items-end md:justify-between md:gap-10"
+          >
+            <div className="shrink-0">
+              <p className="font-footer-text text-[0.7rem] uppercase tracking-[0.22em] text-white/45">{pricingCopy.eyebrow}</p>
+              <h1 id="pricing-title" className="m-0 mt-2">
+                <span className="block whitespace-nowrap font-footer-display text-[clamp(1.9rem,3.4vw,3rem)] font-medium leading-none tracking-[-0.045em] text-white">{pricingCopy.title}</span>
+              </h1>
             </div>
-
-            <div ref={centerScroll} className={cn("px-[clamp(1rem,1.6vw,1.5rem)] py-4 lg:flex-1", colScroll)} data-lenis-prevent>
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={`${active}-${subIndex}`}
-                  initial={reduce ? false : { opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={reduce ? undefined : { opacity: 0, y: -8 }}
-                  transition={{ duration: 0.4, ease: EASE }}
-                >
-                  <div className="grid items-stretch gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,12.5rem),1fr))]">
-                    {sub.pkgs.map((pkg, pi) => (
-                      <PackageCard
-                        key={pkg.name}
-                        pkg={pkg}
-                        index={pi}
-                        selected={pickedHere === pi}
-                        discount={slotDiscount}
-                        onToggle={() => dispatch({ type: "toggle", key, index: pi })}
-                      />
-                    ))}
-                  </div>
-
-                  {sub.addons.some((g) => g.items.length > 0) && (
-                    <div className="mt-7">
-                      <div className="flex items-baseline justify-between gap-4">
-                        <p className="text-[0.68rem] font-medium uppercase tracking-[0.2em] text-white/45">Add-ons</p>
-                        <p className="text-[0.75rem] text-white/40">Optional extras, billed at full price</p>
-                      </div>
-                      {sub.addons.map((group, ci) => (
-                        <div key={`${group.cat}-${ci}`} className="mt-3">
-                          {group.cat && <p className="mb-2 text-[0.8rem] font-semibold text-[#c9c2ff]">{group.cat}</p>}
-                          <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
-                            {group.items.map((a, ai) => {
-                              const k = addonKey(active, subIndex, ci, ai);
-                              return <AddonRow key={k} addon={a} qty={state.qty[k] ?? 0} onChange={(d) => dispatch({ type: "qty", key: k, delta: d })} />;
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+            <div className="flex flex-col gap-2 md:max-w-[27rem] md:items-end md:text-right">
+              <p className="text-[0.85rem] leading-relaxed text-white/55">{pricingCopy.sub.replace("{t1}", String(t1)).replace("{t2}", String(t2))}</p>
+              <div className="flex min-h-7 items-center gap-2 whitespace-nowrap">
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {picks > 0 && (
+                    <motion.span
+                      key={nextDiscount}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      className="rounded-full bg-[#22d8ff]/10 px-3 py-1 text-[0.72rem] font-medium text-[#7ce9ff] ring-1 ring-[#22d8ff]/30"
+                    >
+                      Next service {Math.round(nextDiscount * 100)}% off
+                    </motion.span>
                   )}
-                </motion.div>
-              </AnimatePresence>
+                </AnimatePresence>
+                {cart.savings > 0 && <span className="text-[0.72rem] text-white/45">saving {money(cart.savings)}</span>}
+                {cart.items.length > 0 && (
+                  <button type="button" onClick={() => dispatch({ type: "reset" })} className="rounded-full px-3 py-1 text-[0.72rem] text-white/50 ring-1 ring-white/10 transition-colors hover:text-white">
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          </motion.header>
+        }
+      />
 
-          {/* details + summary (desktop) */}
-          <aside className={cn("hidden min-w-0 p-4 xl:block", panelBox, colScroll)} data-lenis-prevent>
-            {panel}
-          </aside>
-        </div>
-      </motion.div>
+      <SelectionBar cart={cart} visible={inView && service === null && !checkout} emptyLabel={pricingCopy.empty} reviewLabel={pricingCopy.review} onReview={() => setCheckout(true)} />
 
-      {/* below xl: floating selection bar + bottom sheet */}
-      <div className="xl:hidden">
-        <MobileCart
-          open={sheet}
-          onOpen={() => setSheet(true)}
-          onClose={() => setSheet(false)}
-          visible={inView}
-          count={cart.items.length}
-          total={cart.total}
-          hasCustom={cart.hasCustom}
-        >
-          {panel}
-        </MobileCart>
-      </div>
+      <ServiceDialog content={content} state={state} cart={cart} dispatch={dispatch} service={service} onClose={closeService} onReview={review} />
+
+      <CheckoutDrawer open={checkout} onClose={closeCheckout}>
+        <EnquiryPanel cart={cart} form={form} onForm={setForm} status={status} sent={sent} onSubmit={submit} onNew={startNew} dispatch={dispatch} />
+      </CheckoutDrawer>
     </section>
   );
 }
