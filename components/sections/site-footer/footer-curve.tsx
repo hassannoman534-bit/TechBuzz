@@ -9,9 +9,13 @@ type FooterCurveProps = {
   color?: string;
 };
 
+/* Feathers the arc: solid near the page, dissolving toward its rim (no rim line, no hard edge) */
+const FEATHER = "radial-gradient(120% 100% at 50% 0%, #000 45%, transparent 100%)";
+
 /**
  * The bottom edge of the page above, bulging down over the footer in a soft arc.
  * As the footer is revealed the arc flattens out (scaleY → 0), like the page letting go.
+ * The arc is masked so it dissolves into the footer instead of cutting across it.
  * One element, transform only.
  */
 export function FooterCurve({ progress, color = "#030712" }: FooterCurveProps) {
@@ -19,8 +23,8 @@ export function FooterCurve({ progress, color = "#030712" }: FooterCurveProps) {
   return (
     <motion.div
       aria-hidden
-      style={{ scaleY, originY: 0, backgroundColor: color, willChange: "transform" }}
-      className="pointer-events-none absolute inset-x-[-10%] top-0 z-30 h-[clamp(70px,11vw,190px)] rounded-b-[50%] shadow-[0_2px_0_rgb(123_97_255/0.55),0_10px_40px_-6px_rgb(123_97_255/0.45),0_40px_90px_-20px_rgb(0_0_0/0.8)]"
+      style={{ scaleY, originY: 0, backgroundColor: color, maskImage: FEATHER, WebkitMaskImage: FEATHER, willChange: "transform" }}
+      className="pointer-events-none absolute inset-x-[-10%] top-0 z-30 h-[clamp(90px,14vw,240px)] rounded-b-[50%]"
     />
   );
 }

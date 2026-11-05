@@ -22,6 +22,10 @@ type SiteFooterProps = {
   curveColor?: string;
 };
 
+/* Eased ramp (no visible banding) from the page colour to transparent */
+const edgeRamp = (c: string) =>
+  `linear-gradient(to bottom, ${c} 0%, color-mix(in srgb, ${c} 88%, transparent) 22%, color-mix(in srgb, ${c} 60%, transparent) 46%, color-mix(in srgb, ${c} 28%, transparent) 70%, color-mix(in srgb, ${c} 8%, transparent) 88%, transparent 100%)`;
+
 const label = "text-[0.7rem] font-medium uppercase tracking-[0.18em] text-[#f4f3ff]/40";
 const pill =
   "group inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-white/[0.04] px-3.5 py-2 text-[0.8rem] md:px-4 md:py-2.5 md:text-[0.85rem] text-[#f4f3ff]/90 ring-1 ring-white/12 shadow-[inset_0_1px_0_rgb(255_255_255/0.10)] transition-[background-color,box-shadow,color] duration-300 hover:bg-white/[0.08] hover:text-white hover:ring-white/30";
@@ -42,6 +46,10 @@ export function SiteFooter({ content = footerContent, className, curveColor = "#
   const p: MotionValue<number> = reduce ? settled : smooth;
 
   const drift = useTransform(p, [0, 1], ["14vh", "0vh"]);
+  // Top-edge dissolve: a page-coloured gradient pinned to the footer's top edge. It tracks the real
+  // (unsmoothed) scroll, stays full while the edge is on screen and fades out before the footer
+  // settles, so the panel is never dimmed at rest. Opacity only (compositor), no per-frame paint.
+  const edgeFade = useTransform(scrollYProgress, [0, 0.5, 0.92], [1, 1, 0]);
   const fade = useTransform(p, [0, 0.6], [0.2, 1]);
 
   // Read the year after mount: `new Date()` during render blocks the prerender under
@@ -55,13 +63,18 @@ export function SiteFooter({ content = footerContent, className, curveColor = "#
       ref={ref}
       aria-label="Site footer"
       className={cn(
-        "relative h-(--footer-h) [--footer-h:clamp(560px,100svh,1000px)]",
+        "relative h-(--footer-h) [--footer-h:clamp(560px,100svh,1000px)] [--edge-fade:clamp(140px,26svh,280px)]",
         "[clip-path:polygon(0_0,100%_0,100%_100%,0_100%)]",
         "[@media(max-height:599px)]:h-auto [@media(max-height:599px)]:[clip-path:none]",
         className,
       )}
     >
       {!reduce && <FooterCurve progress={p} color={curveColor} />}
+      <motion.div
+        aria-hidden
+        style={{ opacity: edgeFade, backgroundImage: edgeRamp(curveColor) }}
+        className="pointer-events-none absolute inset-x-0 top-0 z-20 h-(--edge-fade) will-change-[opacity]"
+      />
       <div data-footer-panel className="fixed inset-x-0 bottom-0 isolate flex h-(--footer-h) flex-col overflow-hidden bg-[#0a0b22] text-[#f4f3ff] [@media(max-height:599px)]:relative [@media(max-height:599px)]:h-auto">
         {/* Depth: shadow under the departing page, glows for the glass to refract */}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-40 bg-[linear-gradient(180deg,rgb(0_0_0/0.55),transparent)]" />
