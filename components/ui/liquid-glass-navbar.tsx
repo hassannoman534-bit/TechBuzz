@@ -42,6 +42,10 @@ export type LiquidNavbarProps = {
   sound?: boolean
   /** draw the pill's own glass. Off when the navbar sits inside another glass surface */
   glass?: boolean
+  /** strength of the pill's lit edge, 0..1. Lower it when the pill sits inside another rimmed surface */
+  edge?: number
+  /** px the active drop is inset from its item on every side, so it never touches the pill rim */
+  dropInset?: number
   /** every tap, also on the active item (onChange only fires when the index changes) */
   onSelect?: (index: number, item: LiquidNavItem, el: HTMLElement | null) => void
   onItemEnter?: (index: number, el: HTMLElement | null) => void
@@ -82,14 +86,14 @@ const NIMBUS_CSS = `
   position:relative;display:inline-flex;align-items:center;gap:2px;padding:6px;border-radius:999px;isolation:isolate;
   font-family:inherit;-webkit-font-smoothing:antialiased;user-select:none;-webkit-tap-highlight-color:transparent}
 .nimbus-nav[data-tone="dark"]{--n-tint:rgba(10,12,30,.28);--n-fg:#FFFFFF;--n-fg-soft:rgba(255,255,255,.6);--n-rim:rgba(255,255,255,.22)}
-.nimbus-nav[data-glass="off"] .nimbus-glass{background:rgba(255,255,255,.025);-webkit-backdrop-filter:none!important;backdrop-filter:none!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),inset 0 0 0 1px rgba(255,255,255,.06)}
+.nimbus-nav[data-glass="off"] .nimbus-glass{background:rgba(255,255,255,.018);-webkit-backdrop-filter:none!important;backdrop-filter:none!important;box-shadow:none}
 .nimbus-glass{position:absolute;inset:0;border-radius:inherit;z-index:-2;overflow:hidden;background:var(--n-tint);
   -webkit-backdrop-filter:blur(10px) saturate(1.2) brightness(1.08);backdrop-filter:blur(10px) saturate(1.2) brightness(1.08);
   box-shadow:inset 0 1px 1px var(--n-rim),inset 0 0 0 1px rgba(255,255,255,.2),0 12px 32px -14px rgba(0,40,90,.5),0 2px 6px rgba(0,40,90,.1)}
 .nimbus-nav[data-refract="on"] .nimbus-glass{-webkit-backdrop-filter:url(#nimbus-refract) blur(2px) saturate(1.2) brightness(1.08);backdrop-filter:url(#nimbus-refract) blur(2px) saturate(1.2) brightness(1.08)}
 .nimbus-water{position:absolute;left:${-PAD}px;top:${-PAD}px;z-index:-1;pointer-events:none}
 .nimbus-nav[data-gl="off"] .nimbus-water{display:none}
-.nimbus-drop{display:none;position:absolute;top:6px;bottom:6px;left:0;border-radius:999px;z-index:-1;pointer-events:none;will-change:transform,width;
+.nimbus-drop{display:none;position:absolute;top:calc(6px + var(--n-inset,0px));bottom:calc(6px + var(--n-inset,0px));left:0;border-radius:999px;z-index:-1;pointer-events:none;will-change:transform,width;
   background:radial-gradient(120% 140% at 30% 0%,rgba(255,255,255,.75),rgba(255,255,255,0) 55%),rgba(255,255,255,.38);
   box-shadow:inset 0 1px 1px rgba(255,255,255,.95),inset 0 -2px 6px rgba(0,162,255,.22),inset 0 0 0 1px rgba(255,255,255,.55),0 6px 16px -6px rgba(0,70,140,.45)}
 .nimbus-nav[data-gl="off"] .nimbus-drop{display:block}
@@ -133,7 +137,7 @@ const NIMBUS_CSS = `
 const VERT = `attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}`
 const FRAG = `precision highp float;
 uniform vec2 uRes;uniform float uDpr;uniform float uTime;uniform vec4 uPill;
-uniform vec4 uBlob[6];uniform float uSy[6];uniform vec4 uRip[6];uniform vec3 uMouse;uniform float uDark;uniform float uAmb;
+uniform vec4 uBlob[6];uniform float uSy[6];uniform vec4 uRip[6];uniform vec3 uMouse;uniform float uDark;uniform float uAmb;uniform float uEdge;
 float sdRB(vec2 p,vec2 b,float r){vec2 q=abs(p)-b+r;return length(max(q,0.))+min(max(q.x,q.y),0.)-r;}
 float sdCap(vec2 p,vec4 B,float sy){p-=B.xy;p.y/=sy;p.x=max(abs(p.x)-B.z,0.);return(length(p)-B.w)*min(1.,sy);}
 float smin(float a,float b,float k){float h=clamp(.5+.5*(b-a)/k,0.,1.);return mix(b,a,h)-k*h*(1.-h);}
@@ -144,7 +148,7 @@ float waves(vec2 p){float w=0.;
  for(int i=0;i<6;i++){vec4 R=uRip[i];if(R.w>0.){float x=length(p-R.xy)-R.z*240.;w+=R.w*exp(-R.z*1.7)*sin(x*.3)*exp(-x*x/700.);}}
  vec2 m=p-uMouse.xy;w+=uMouse.z*3.6*exp(-dot(m,m)/1000.);
  w+=uAmb*(sin(p.x*.05+uTime*1.2)*.45+sin(p.x*.13-uTime*.85+p.y*.2)*.25);return w;}
-float H(vec2 p){float dp=pillD(p);return lens(dp,uPill.w*.36)*2.4+lens(dropD(p),11.)*7.5+waves(p)*smoothstep(0.,7.,-dp);}
+float H(vec2 p){float dp=pillD(p);return lens(dp,uPill.w*.36)*2.4*uEdge+lens(dropD(p),11.)*7.5+waves(p)*smoothstep(0.,7.,-dp);}
 float caus(vec2 p,float t){vec2 q=p;float c=0.;for(int i=0;i<3;i++){q+=vec2(sin(q.y*1.1+t),cos(q.x*1.3-t*.7))*.6;c+=1./(1.+16.*abs(sin(q.x)*sin(q.y)));}return c/3.;}
 void main(){
  vec2 p=vec2(gl_FragCoord.x,uRes.y*uDpr-gl_FragCoord.y)/uDpr;
@@ -231,7 +235,7 @@ function initGL(canvas: HTMLCanvasElement) {
   gl.enableVertexAttribArray(loc)
   gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0)
   const u: Record<string, WebGLUniformLocation | null> = {}
-  for (const n of ["uRes", "uDpr", "uTime", "uPill", "uBlob", "uSy", "uRip", "uMouse", "uDark", "uAmb"]) u[n] = gl.getUniformLocation(p, n)
+  for (const n of ["uRes", "uDpr", "uTime", "uPill", "uBlob", "uSy", "uRip", "uMouse", "uDark", "uAmb", "uEdge"]) u[n] = gl.getUniformLocation(p, n)
   return { gl, u }
 }
 
@@ -250,6 +254,8 @@ export function LiquidNavbar({
   compact,
   sound = false,
   glass = true,
+  edge = 1,
+  dropInset = 0,
   onSelect,
   onItemEnter,
   onItemLeave,
@@ -272,6 +278,9 @@ export function LiquidNavbar({
   const dark = tone === "dark" ? 1 : 0
   const darkRef = React.useRef(dark)
   darkRef.current = dark
+  const edgeRef = React.useRef(edge)
+  edgeRef.current = Math.max(0, Math.min(1, edge))
+  const inset = Math.max(0, dropInset)
 
   /* ---- drawing ---- */
   const draw = React.useCallback(() => {
@@ -302,6 +311,7 @@ export function LiquidNavbar({
       g.uniform3f(u.uMouse, s.mouse.x, s.mouse.y, s.mouse.s)
       g.uniform1f(u.uDark, darkRef.current)
       g.uniform1f(u.uAmb, s.reduce ? 0 : 1)
+      g.uniform1f(u.uEdge, edgeRef.current)
       g.clearColor(0, 0, 0, 0)
       g.clear(g.COLOR_BUFFER_BIT)
       g.drawArrays(g.TRIANGLES, 0, 3)
@@ -332,7 +342,7 @@ export function LiquidNavbar({
         const f = !lead && now < s.lagFrom ? 0.08 : 1
         B.v += (k * (T.x - B.x) - c * B.v) * dt * f
         B.x += B.v * dt
-        const lo = PAD + 6 + s.q + T.r - 3, hi = PAD + s.w - 6 - s.q - T.r + 3
+        const lo = PAD + 6 + s.q + T.r, hi = PAD + s.w - 6 - s.q - T.r
         if (B.x < lo || B.x > hi) {
           s.sy.v -= Math.min(Math.abs(B.v), 900) * 0.0016
           B.x = Math.max(lo, Math.min(hi, B.x))
@@ -416,8 +426,8 @@ export function LiquidNavbar({
       return
     }
     const T = s.t
-    T.r = el.offsetHeight / 2
-    T.q = Math.max(0, el.offsetWidth / 2 - T.r)
+    T.r = el.offsetHeight / 2 - inset
+    T.q = Math.max(0, el.offsetWidth / 2 - el.offsetHeight / 2)
     T.cy = PAD + el.offsetTop + el.offsetHeight / 2
     const nx = PAD + el.offsetLeft + el.offsetWidth / 2
     if (!s.ready) {
@@ -443,7 +453,7 @@ export function LiquidNavbar({
       }
     }
     loop()
-  }, [current, loop])
+  }, [current, loop, inset])
 
   React.useEffect(() => {
     setRefract(supportsRefraction())
@@ -564,7 +574,7 @@ export function LiquidNavbar({
       onPointerMove={onMove}
       onPointerLeave={() => { st.current.mouse.on = false; loop() }}
       onPointerDown={(e) => { const p = local(e.clientX, e.clientY); ripple(p.x, p.y, 0.8) }}
-      style={style}
+      style={{ ...style, "--n-inset": `${inset}px` } as React.CSSProperties}
     >
       <style dangerouslySetInnerHTML={{ __html: NIMBUS_CSS }} />
       <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
