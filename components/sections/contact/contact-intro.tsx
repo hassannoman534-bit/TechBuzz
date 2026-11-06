@@ -15,6 +15,7 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 export function ContactIntro({ content }: { content: ContactContent }) {
   const reduce = useReducedMotionSafe();
   const words = content.heading.split(" ");
+  let letterIndex = 0;
 
   return (
     <div className="flex flex-col">
@@ -22,20 +23,33 @@ export function ContactIntro({ content }: { content: ContactContent }) {
         <span className="sr-only">{content.heading}</span>
         <span
           aria-hidden
-          className="-mb-[0.14em] block overflow-hidden pb-[0.14em] font-footer-display text-[clamp(3.4rem,15vw,5.5rem)] font-medium leading-[0.95] tracking-[-0.05em] md:text-[clamp(4.5rem,8.4vw,9.5rem)]"
+          className="group/h -mb-[0.16em] block pb-[0.16em] font-footer-display text-[clamp(3.4rem,15vw,5.5rem)] font-medium leading-[0.95] tracking-[-0.05em] md:text-[clamp(4.5rem,8.4vw,9.5rem)]"
+          style={{ perspective: "900px" }}
         >
-          {words.map((w, i) => (
-            <span key={`${w}-${i}`}>
-              <motion.span
-                className="inline-block will-change-transform"
-                style={{ transformOrigin: "0% 100%" }}
-                initial={reduce ? false : { y: "105%", rotate: 3, opacity: 0, filter: "blur(10px)" }}
-                animate={{ y: "0%", rotate: 0, opacity: 1, filter: "blur(0px)" }}
-                transition={{ duration: 1.3, ease: EASE, delay: 0.25 + i * 0.09 }}
-              >
-                {w}
-              </motion.span>
-              {i < words.length - 1 && " "}
+          {words.map((w, wi) => (
+            <span key={`${w}-${wi}`} className="inline-block whitespace-nowrap">
+              {Array.from(w).map((ch, ci) => {
+                const n = letterIndex++;
+                return (
+                  <motion.span
+                    key={ci}
+                    className="inline-block will-change-transform"
+                    style={{ transformOrigin: "50% 100% -0.4em" }}
+                    initial={reduce ? false : { opacity: 0, y: "0.55em", rotateX: -85 }}
+                    animate={{ opacity: 1, y: "0em", rotateX: 0 }}
+                    transition={{ duration: 1.25, ease: EASE, delay: 0.2 + n * 0.045 }}
+                  >
+                    {/* hover: a slow wave runs through the letters */}
+                    <span
+                      className="inline-block transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/h:-translate-y-[0.08em] motion-reduce:transition-none"
+                      style={{ transitionDelay: `${n * 28}ms` }}
+                    >
+                      {ch}
+                    </span>
+                  </motion.span>
+                );
+              })}
+              {wi < words.length - 1 && <span className="inline-block w-[0.2em]" />}
             </span>
           ))}
         </span>

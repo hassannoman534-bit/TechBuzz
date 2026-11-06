@@ -9,6 +9,8 @@ import { GlassField } from "./glass-field";
 import { ChoiceChips } from "./choice-chips";
 import { SubmitButton } from "./submit-button";
 import { FormSuccess } from "./form-success";
+import { RimLight } from "./rim-light";
+import { Magnetic } from "./magnetic";
 import { emptyContactForm, sendContact, type ContactForm as Form } from "./send-contact";
 import type { ContactContent } from "./contact.config";
 
@@ -93,17 +95,23 @@ export function ContactForm({ content }: { content: ContactContent }) {
     setLockH(null);
   };
 
+  // Staggered rise for the form's blocks on first show
+  const rise = (i: number) =>
+    reduce ? {} : { initial: { opacity: 0, y: 18 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.9, ease: EASE, delay: 0.7 + i * 0.07 } };
   const t = content.form;
   const app = content.application;
 
   return (
     <motion.div
+      id="contact-form"
+      className="scroll-mt-28"
       initial={reduce ? false : { opacity: 0, y: 56 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 1.4, ease: EASE, delay: 0.45 }}
     >
       {/* No backdrop blur: on a card this large it repaints on every keystroke (handoff rule) */}
-      <GlassPanel spotlight={!reduce} className="p-[clamp(1.25rem,3vw,2.75rem)] backdrop-blur-none">
+      <GlassPanel spotlight={!reduce} className="group/rim p-[clamp(1.25rem,3vw,2.75rem)] backdrop-blur-none">
+        <RimLight />
         <div ref={body} style={lockH && status === "sent" ? { minHeight: lockH } : undefined} className="flex flex-col justify-center">
         <AnimatePresence mode="wait" initial={false}>
           {status === "sent" ? (
@@ -121,14 +129,14 @@ export function ContactForm({ content }: { content: ContactContent }) {
               transition={{ duration: 0.45, ease: EASE }}
               className="flex flex-col gap-[clamp(1.5rem,3svh,2rem)]"
             >
-              <h2 className="text-white">
+              <motion.h2 {...rise(0)} className="text-white">
                 <span className="font-footer-display text-[clamp(1.6rem,2.4vw,2.25rem)] font-medium tracking-[-0.03em]">
                   {form.role ? app.heading : t.heading}
                 </span>
-              </h2>
+              </motion.h2>
 
               {form.role ? (
-                <div className="flex flex-wrap items-center gap-3">
+                <motion.div {...rise(1)} className="flex flex-wrap items-center gap-3">
                   <span className="text-[0.95rem] text-white/60">{app.label}</span>
                   <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-[linear-gradient(140deg,#7b61ff,#5b7cff_60%,#22a8ff)] py-2 pl-4 pr-2 text-[0.92rem] text-white">
                     {form.role}
@@ -141,15 +149,19 @@ export function ContactForm({ content }: { content: ContactContent }) {
                       <X className="size-3.5" />
                     </button>
                   </span>
-                </div>
+                </motion.div>
               ) : (
                 <>
-                  <ChoiceChips legend={t.servicesLabel} options={t.services} selected={form.services} onToggle={(v) => toggle("services", v)} />
-                  <ChoiceChips legend={t.budgetLabel} options={t.budgets} selected={form.budget} onToggle={(v) => toggle("budget", v, true)} single />
+                  <motion.div {...rise(1)}>
+                    <ChoiceChips legend={t.servicesLabel} options={t.services} selected={form.services} onToggle={(v) => toggle("services", v)} />
+                  </motion.div>
+                  <motion.div {...rise(2)}>
+                    <ChoiceChips legend={t.budgetLabel} options={t.budgets} selected={form.budget} onToggle={(v) => toggle("budget", v, true)} single />
+                  </motion.div>
                 </>
               )}
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <motion.div {...rise(3)} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <GlassField label="Name" name="name" autoComplete="name" required value={form.name} onChange={(v) => set("name", v)} error={errors.name} />
                 <GlassField label="Email" name="email" type="email" autoComplete="email" required value={form.email} onChange={(v) => set("email", v)} error={errors.email} />
                 <GlassField label="Phone or WhatsApp" name="phone" type="tel" autoComplete="tel" value={form.phone} onChange={(v) => set("phone", v)} />
@@ -168,7 +180,7 @@ export function ContactForm({ content }: { content: ContactContent }) {
                   onChange={(v) => set("message", v)}
                   error={errors.message}
                 />
-              </div>
+              </motion.div>
 
               {/* honeypot: hidden from people and assistive tech */}
               <div aria-hidden className="absolute left-[-9999px] top-auto h-px w-px overflow-hidden">
@@ -178,8 +190,10 @@ export function ContactForm({ content }: { content: ContactContent }) {
                 </label>
               </div>
 
-              <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <SubmitButton label={t.submit} sendingLabel={t.sending} sending={status === "sending"} className="w-full sm:w-auto" />
+              <motion.div {...rise(4)} className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <Magnetic className="w-full sm:w-auto">
+                  <SubmitButton label={t.submit} sendingLabel={t.sending} sending={status === "sending"} className="w-full sm:w-auto" />
+                </Magnetic>
                 <AnimatePresence>
                   {status === "error" && (
                     <motion.p
@@ -193,7 +207,7 @@ export function ContactForm({ content }: { content: ContactContent }) {
                     </motion.p>
                   )}
                 </AnimatePresence>
-              </div>
+              </motion.div>
             </motion.form>
           )}
         </AnimatePresence>

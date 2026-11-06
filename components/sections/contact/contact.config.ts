@@ -21,6 +21,8 @@ export type Studio = {
 export type ContactContent = {
   heading: string;
   sub: string;
+  /** The old site's line, set as the marquee */
+  marquee: string;
   channels: ContactChannel[];
   /** Studio hours in Lahore time. SAMPLE: confirm before launch. */
   hours: { timeZone: string; zoneLabel: string; days: number[]; open: number; close: number; label: string };
@@ -54,6 +56,7 @@ roles["open-application"] = "Open application";
 export const contactContent: ContactContent = {
   heading: "Let's talk.",
   sub: "Tell us what you are building. We reply within one working day.",
+  marquee: "Let's work together",
   channels: [
     { label: "WhatsApp", value: footerContent.phones[0].display, href: footerContent.whatsapp.href, external: true },
     { label: "Email", value: footerContent.email, href: `mailto:${footerContent.email}` },

@@ -1,6 +1,7 @@
 import { ContactIntro } from "./contact-intro";
 import { ContactForm } from "./contact-form";
 import { Studios } from "./studios";
+import { WorkMarquee } from "./work-marquee";
 import { contactContent, type ContactContent } from "./contact.config";
 
 /**
@@ -26,6 +27,9 @@ export function ContactPage({ content = contactContent }: { content?: ContactCon
           <ContactForm content={content} />
         </div>
       </section>
+      <div className="mt-[clamp(3rem,9svh,6rem)]">
+        <WorkMarquee text={content.marquee} href="#contact-form" />
+      </div>
       <div className="mx-auto" style={{ maxWidth: "min(100%, 96rem)" }}>
         <Studios content={content.studios} />
       </div>
