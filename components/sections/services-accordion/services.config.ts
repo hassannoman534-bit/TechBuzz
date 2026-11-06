@@ -1,4 +1,4 @@
-export type ServiceArt = "bars" | "rings" | "orbits" | "frames" | "peaks" | "windows" | "network";
+export type ServiceArt = "bars" | "rings" | "orbits" | "frames" | "peaks" | "windows" | "network" | "play";
 
 export type Service = {
   title: string;
@@ -18,56 +18,64 @@ export const servicesContent: ServicesContent = {
   eyebrow: "( What we do )",
   heading: { lead: "Services built to", highlight: "scale results" },
   intro:
-    "Seven disciplines under one roof, planned together and measured against the numbers that matter to your business.",
+    "Eight disciplines under one roof, planned together and measured against the numbers that matter to your business.",
+  /* Same eight services, names and order as the Services page (pricing labels; "Web & Automation" short title) */
   services: [
     {
-      title: "Search Engine Optimization",
-      description:
-        "We make your brand the answer people find first. Technical audits, content strategy and authority building that turn search into a steady source of qualified leads.",
-      href: "/#services",
-      art: "bars",
-    },
-    {
-      title: "Paid Advertising",
-      description:
-        "Campaigns on Meta, Google and TikTok built around return, not reach. Sharp creative, precise targeting and weekly optimisation tied to revenue.",
-      href: "/#services",
-      art: "rings",
-    },
-    {
-      title: "Social Media Marketing",
+      title: "Social Media",
       description:
         "Content calendars, community management and platform strategy that keep your brand present, consistent and worth following.",
-      href: "/#services",
+      href: "/services",
       art: "orbits",
     },
     {
-      title: "Content & Video Production",
+      title: "Paid Ads",
       description:
-        "Photography, short form video and YouTube content produced in house. Stories crafted for the feed and built to hold attention.",
-      href: "/#services",
+        "Campaigns on Meta, Google and TikTok built around return, not reach. Sharp creative, precise targeting and weekly optimisation tied to revenue.",
+      href: "/services",
+      art: "rings",
+    },
+    {
+      title: "Content Production",
+      description:
+        "Photography, short form video and UGC produced in house. Stories crafted for the feed and built to hold attention.",
+      href: "/services",
       art: "frames",
     },
     {
-      title: "Branding & Identity",
+      title: "Branding",
       description:
-        "Names, logos and visual systems that give your business a clear point of view. Every element designed to work together across every touchpoint.",
-      href: "/#services",
+        "Names, logos, menus and visual systems that give your business a clear point of view across every touchpoint.",
+      href: "/services",
       art: "peaks",
     },
     {
-      title: "Web & App Development",
+      title: "AI Content",
       description:
-        "Fast, scalable websites and mobile apps engineered for conversion. From first wireframe to launch and ongoing care.",
-      href: "/#services",
+        "AI avatars, voiceovers and generated visuals made to your brand standards. More content, faster, without losing your look.",
+      href: "/services",
+      art: "network",
+    },
+    {
+      title: "SEO",
+      description:
+        "We make your brand the answer people find first. Technical audits, local SEO and content that turn search into a steady source of leads.",
+      href: "/services",
+      art: "bars",
+    },
+    {
+      title: "Web & Automation",
+      description:
+        "Fast websites and apps engineered for conversion, plus chat assistants and lead workflows that take repetitive work off your team.",
+      href: "/services",
       art: "windows",
     },
     {
-      title: "AI Automation",
+      title: "YouTube",
       description:
-        "Chat assistants, lead workflows and reporting pipelines that remove repetitive work, so your team can focus on growth.",
-      href: "/#services",
-      art: "network",
+        "Channel strategy, scripts, long form videos, Shorts and thumbnails, produced and published for steady growth.",
+      href: "/services",
+      art: "play",
     },
   ],
 };

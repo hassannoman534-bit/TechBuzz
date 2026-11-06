@@ -92,6 +92,18 @@ export function ServiceArt({ kind }: { kind: ArtKind }) {
         ))}
       </>
     ),
+    play: (
+      <>
+        {/* stacked video frames with a play button and a progress bar */}
+        {[0, 1, 2].map((i) => (
+          <rect key={i} x={300 + i * 34} y={90 + i * 26} width={280 - i * 40} height={170 - i * 26} rx={26 - i * 4} fill={`url(#${g("d")})`} opacity={0.22 + i * 0.18} />
+        ))}
+        <circle cx="474" cy="190" r="44" fill={`url(#${g("r")})`} />
+        <path d="M460 168 L496 190 L460 212 Z" fill="#e7eaf3" opacity="0.9" />
+        <rect x="380" y="262" width="200" height="6" rx="3" fill="#e7eaf3" opacity="0.15" />
+        <rect x="380" y="262" width="118" height="6" rx="3" fill="#22d8ff" opacity="0.8" />
+      </>
+    ),
   };
 
   return (
