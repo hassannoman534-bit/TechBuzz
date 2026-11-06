@@ -1,5 +1,5 @@
 import localFont from "next/font/local";
-import { Newsreader, Caveat, Lexend_Giga, Outfit, Inter_Tight } from "next/font/google";
+import { Newsreader, Caveat, Lexend_Giga, Outfit, Inter_Tight, Montserrat } from "next/font/google";
 
 /** Display + UI sans: the closest match to the reference wordmark (heavy neo-grotesk). */
 export const pretendard = localFont({
@@ -28,3 +28,6 @@ export const outfit = Outfit({ subsets: ["latin"], weight: ["500", "600"], varia
 
 /** Footer UI/body text. */
 export const interTight = Inter_Tight({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-inter-tight", display: "swap" });
+
+/** Our Team: giant masked names and designations (heavy weights only). */
+export const montserrat = Montserrat({ subsets: ["latin"], weight: ["600", "800"], variable: "--font-montserrat", display: "swap" });

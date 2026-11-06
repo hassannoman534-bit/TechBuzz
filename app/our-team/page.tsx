@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHero } from "@/components/sections/page-hero/page-hero";
+import { TeamShowcase } from "@/components/sections/team-showcase/team-showcase";
 import { SiteFooter } from "@/components/sections/site-footer/site-footer";
 
 export const metadata: Metadata = {
@@ -7,7 +8,6 @@ export const metadata: Metadata = {
   description: "Meet the designers, developers and marketers behind TechBuzz, a digital marketing agency in Lahore.",
 };
 
-// Placeholder: only the hero for now. The team section comes next.
 export default function OurTeam() {
   return (
     <main className="bg-[#030712]">
@@ -18,6 +18,7 @@ export default function OurTeam() {
           sub: "Designers, developers and marketers who care about your brand as much as you do.",
         }}
       />
+      <TeamShowcase />
       <SiteFooter />
     </main>
   );
