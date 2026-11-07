@@ -98,16 +98,19 @@ export function TeamStage({ members, eyebrow, hint, roleCue }: TeamStageProps) {
   useEffect(() => {
     if (openIndex === null) return;
     lenis?.stop();
-    const html = document.documentElement;
-    const prev = html.style.overflow;
-    html.style.overflow = "hidden";
+    // Lock <body>, never <html>: <html> is h-full, so overflow:hidden on it turns it into its own
+    // scroll box and breaks the pinned stage's sticky (the stage jumps off screen, page goes blank).
+    // body overflow propagates to the viewport instead, so sticky keeps working.
+    const body = document.body;
+    const prev = body.style.overflow;
+    body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === "Escape") close();
     };
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
-      html.style.overflow = prev;
+      body.style.overflow = prev;
       lenis?.start();
     };
   }, [openIndex, close, lenis]);
