@@ -1,40 +1,18 @@
 /**
- * Message From CEO page content and motion constants.
+ * Message From CEO: content and motion constants.
  *
- * Copy rules: short lines, no dashes, nothing that wraps awkwardly in the 3D stage.
- * Each line in `message.lines` is its own block in the perspective scroll. Two limits
- * to respect when this placeholder is replaced with Usman's real words:
+ * Copy rules: short lines, no dashes. Two limits when the placeholder message is
+ * replaced with Usman's real words:
  *   - about 36 characters a line, or it wraps and the tilt doubles the wrapped line
- *   - six lines, because the block has to land inside one viewport at 1536x700
+ *   - six to eight lines. Every line has to finish its pass before the stage unpins.
  */
 
 export type CeoMessageContent = {
-  intro: {
-    /** Logo shown in the opening overlay. White on transparent reads best on #030712. */
-    logoSrc: string;
-    logoAlt: string;
-    /** Intrinsic size of the file, used so next/image never guesses. */
-    logoWidth: number;
-    logoHeight: number;
-    /** How long the logo holds before it fades out, in milliseconds. */
-    holdMs: number;
-    /** Shorter hold when the visitor asked for reduced motion. */
-    reducedHoldMs: number;
-  };
-  heading: {
-    eyebrow: string;
-    title: string;
-    sub: string;
-    cue: string;
-  };
-  message: {
-    lines: string[];
-  };
-  signature: {
-    name: string;
-    role: string;
-    company: string;
-  };
+  intro: { logoSrc: string; logoAlt: string; logoWidth: number; logoHeight: number; holdMs: number; reducedHoldMs: number };
+  portrait: { src: string; alt: string; width: number; height: number };
+  heading: { eyebrow: string; title: string; sub: string; cue: string };
+  signature: { name: string; role: string; company: string };
+  message: { lines: string[] };
 };
 
 export const ceoMessage: CeoMessageContent = {
@@ -43,14 +21,25 @@ export const ceoMessage: CeoMessageContent = {
     logoAlt: "TechBuzz",
     logoWidth: 2167,
     logoHeight: 1004,
-    holdMs: 2500,
+    holdMs: 2400,
     reducedHoldMs: 900,
+  },
+  portrait: {
+    src: "/assets/ceo/usman-shabbir.webp",
+    alt: "Usman Shabbir, Chief Executive Officer of TechBuzz",
+    width: 1200,
+    height: 1245,
   },
   heading: {
     eyebrow: "Message from CEO",
     title: "Message from the CEO",
-    sub: "Usman Shabbir on how TechBuzz started and where it is going.",
+    sub: "On how TechBuzz started and where it is going.",
     cue: "Scroll",
+  },
+  signature: {
+    name: "Usman Shabbir",
+    role: "Chief Executive Officer",
+    company: "TechBuzz",
   },
   message: {
     lines: [
@@ -62,38 +51,44 @@ export const ceoMessage: CeoMessageContent = {
       "The standard has not moved.",
     ],
   },
-  signature: {
-    name: "Usman Shabbir",
-    role: "Chief Executive Officer",
-    company: "TechBuzz",
-  },
 };
 
-/** Shared easing for the page. Matches the rest of the site. */
+/** Site easing. Strong ease out: fast on entry, settles late. */
 export const EASE = [0.22, 1, 0.36, 1] as const;
 
-/**
- * Phase 3 stage geometry. These are set as inline styles, never Tailwind arbitrary
- * values, because arbitrary values have been dropped in production builds before.
- */
+/** Phase 3 stage geometry. Inline styles only, never Tailwind arbitrary values. */
 export const STAGE = {
-  /** Total scroll length of the pinned section. */
   heightVh: 300,
-  /** Camera distance. Lower is a harder tilt. 200px matches the reference. */
   perspectivePx: 200,
-  /**
-   * Phones get a longer lens. At 200px on a 390 wide screen the near plane
-   * magnifies so hard that lines clip mid word on both edges.
-   */
+  /** Phones get a longer lens. At 200px the near plane clips lines mid word. */
   perspectivePxMobile: 460,
-  /** Width at or below which the mobile lens is used. */
   mobileMaxWidth: 640,
-  /** Tilt of the text plane. */
-  rotateXDeg: 30,
-  /** Lift off the tilted plane so the first line clears the floor. */
-  translateZPx: 10,
-  /** Travel of the text through the camera, clamped per viewport height. */
+  /** Where the block starts, below and near the camera. */
   travelMinPx: 360,
   travelMaxPx: 620,
   travelVhRatio: 0.62,
+  /**
+   * Extra distance past the block's own height, so the last line finishes its pass
+   * and the stage is empty before it unpins. Without this the block stops centred
+   * and the section drags the unfinished text upward.
+   */
+  exitPadVhRatio: 0.25,
+  /**
+   * Where the readable stretch ends. Up to here the block travels slowly through
+   * the camera; after it, it leaves fast. A straight map spends most of the scroll
+   * on text that has already receded to nothing.
+   */
+  readableUntil: 0.75,
+  /** Fade the stage over the final stretch so nothing is visible when it unpins. */
+  fadeStart: 0.85,
+} as const;
+
+/** Phase 2 portrait motion. */
+export const PORTRAIT = {
+  /** Enters from the right, travelling left and inward. */
+  fromX: "22%",
+  fromScale: 1.08,
+  fromBlurPx: 14,
+  durationS: 1.5,
+  delayS: 0.1,
 } as const;
