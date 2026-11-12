@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useTransform } from "framer-motion";
+import { AnimatePresence, motion, useTransform, type MotionValue } from "framer-motion";
 import type { TeamMemberData } from "./team-library";
 import { GiantWord, type GiantWordLayer } from "./giant-word";
 import { TeamPortrait } from "./team-portrait";
@@ -26,6 +26,8 @@ type BackdropProps = {
   pointer: Pointer;
   nameTint: string;
   roleTint: string;
+  /** Horizontal swipe offset (px); the word follows a little less than the photo */
+  dragX: MotionValue<number>;
 };
 
 /**
@@ -34,8 +36,8 @@ type BackdropProps = {
  * word reads in full. Lives inside the stage's AnimatePresence and propagates its exit, so the
  * letters leave upward while the portrait flies back.
  */
-export function SpotlightBackdrop({ member, phase, layer, pointer, nameTint, roleTint }: BackdropProps) {
-  const x = useTransform(pointer.x, (v) => v * -12);
+export function SpotlightBackdrop({ member, phase, layer, pointer, nameTint, roleTint, dragX }: BackdropProps) {
+  const x = useTransform(() => pointer.x.get() * -12 + dragX.get() * 0.6);
   const y = useTransform(pointer.y, (v) => v * -7);
   const isRole = phase === "role";
 
@@ -90,14 +92,16 @@ type PortraitProps = {
   onToggle: () => void;
   pointer: Pointer;
   roleCue: string;
+  /** Horizontal swipe offset (px) while the finger is down */
+  dragX: MotionValue<number>;
 };
 
 /**
  * The open portrait. Rendered outside AnimatePresence on purpose: when it unmounts, the tile's
  * frame with the same layoutId takes over and flies back from here, with no ghost copy.
  */
-export function SpotlightPortrait({ member, phase, onToggle, pointer, roleCue }: PortraitProps) {
-  const px = useTransform(pointer.x, (v) => v * 8);
+export function SpotlightPortrait({ member, phase, onToggle, pointer, roleCue, dragX }: PortraitProps) {
+  const px = useTransform(() => pointer.x.get() * 8 + dragX.get());
   const py = useTransform(pointer.y, (v) => v * 5);
   const isRole = phase === "role";
 

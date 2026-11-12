@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, MotionConfig, motion, useMotionValue, useScroll, useTransform } from "framer-motion";
 import { useLenis } from "lenis/react";
-import { X } from "lucide-react";
+import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
 import { useFinePointer } from "@/lib/use-fine-pointer";
 import type { TeamMemberData } from "./team-library";
@@ -12,6 +12,7 @@ import { TeamRuler } from "./team-ruler";
 import { SpotlightBackdrop, SpotlightPortrait, type SpotlightPhase } from "./team-spotlight";
 import { TeamCard } from "./team-card";
 import { EASE, GUTTER, NAME_TINT, ROLE_TINT, TEXT_FONT, TOP_BAR, usePointer } from "./team-motion";
+import { useSpotlightSwipe } from "./use-spotlight-swipe";
 
 type TeamStageProps = {
   members: TeamMemberData[];
@@ -32,6 +33,10 @@ const expoOut = (t: number): number => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t));
  *            in giant letters (filled behind the photo, outlined in front, so it always reads).
  *   Click 2: the name leaves, the designation wipes in, a glass card fades in below.
  *   Close (X or Esc): everything reverses back into the rail. Page scroll is paused while open.
+ *   Centring: a click while the section is only partly on screen first glides the page (Lenis) to
+ *            where the stage is fully pinned, then opens, so the spotlight is always centred.
+ *   Switching: while open, a horizontal drag, a two finger trackpad swipe, the arrow keys or the
+ *            small arrows move to the previous or next member without closing.
  */
 export function TeamStage({ members, eyebrow, hint, roleCue }: TeamStageProps) {
   const reduce = useReducedMotionSafe();
@@ -40,6 +45,13 @@ export function TeamStage({ members, eyebrow, hint, roleCue }: TeamStageProps) {
   const lenis = useLenis();
 
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const openIndexRef = useRef<number | null>(null);
+  useEffect(() => {
+    openIndexRef.current = openIndex;
+  }, [openIndex]);
+  const busyRef = useRef(false);
+  const lastSwitchRef = useRef(0);
+  const dragX = useMotionValue(0);
   const [phase, setPhase] = useState<SpotlightPhase>("name");
   const [travel, setTravel] = useState(0);
   const lastOpenRef = useRef<number | null>(null);
@@ -85,13 +97,80 @@ export function TeamStage({ members, eyebrow, hint, roleCue }: TeamStageProps) {
     [lenis, minX, reduce],
   );
 
-  const open = useCallback((index: number): void => {
+  const show = useCallback((index: number): void => {
     lastOpenRef.current = index;
     setPhase("name");
     setOpenIndex(index);
   }, []);
 
-  const close = useCallback((): void => setOpenIndex(null), []);
+  /**
+   * Opens a member. If the stage is not fully pinned yet (section only partly on screen), the
+   * page first glides to the nearest pinned position. Outside the pinned range the rail sits at
+   * its start or end, so it does not move; the spotlight then opens centred on screen.
+   */
+  const open = useCallback(
+    (index: number): void => {
+      const wrapper = wrapperRef.current;
+      if (!wrapper || busyRef.current) return;
+      const r = wrapper.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const pinned = r.top <= 1 && r.bottom >= vh - 1;
+      if (pinned) return show(index);
+      const target = r.top > 0 ? window.scrollY + r.top : window.scrollY + r.bottom - vh;
+      busyRef.current = true;
+      const done = (): void => {
+        // two frames: let the scroll event reach useScroll before the layout morph measures
+        window.requestAnimationFrame(() =>
+          window.requestAnimationFrame(() => {
+            busyRef.current = false;
+            show(index);
+          }),
+        );
+      };
+      if (lenis && !reduce) {
+        lenis.scrollTo(target, { duration: 0.55, easing: expoOut, force: true, onComplete: done });
+      } else {
+        if (lenis) lenis.scrollTo(target, { immediate: true, force: true });
+        else window.scrollTo({ top: target, behavior: "auto" });
+        done();
+      }
+    },
+    [lenis, reduce, show],
+  );
+
+  /** Moves to the previous or next member while open (no close in between). */
+  const navigate = useCallback(
+    (dir: 1 | -1): void => {
+      const current = openIndexRef.current;
+      if (current === null) return;
+      const next = current + dir;
+      if (next < 0 || next >= members.length) return;
+      const now = performance.now();
+      if (now - lastSwitchRef.current < 320) return;
+      lastSwitchRef.current = now;
+      lastOpenRef.current = next;
+      setOpenIndex(next);
+    },
+    [members.length],
+  );
+
+  /**
+   * Closes. If the open member's slot is off screen (after switching), the rail first jumps so
+   * that slot is centred; the other tiles are hidden at that moment, so the jump is invisible,
+   * and the photo then flies back into a visible slot.
+   */
+  const close = useCallback((): void => {
+    const index = openIndexRef.current;
+    const stage = stageRef.current;
+    const slot = index === null ? null : stage?.querySelectorAll<HTMLElement>("[data-team-slot]")[index];
+    if (!slot) return setOpenIndex(null);
+    const r = slot.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const margin = vw * 0.08;
+    if (r.left >= margin && r.right <= vw - margin) return setOpenIndex(null);
+    seek(x.get() + (vw / 2 - (r.left + r.width / 2)), true);
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => setOpenIndex(null)));
+  }, [seek, x]);
   const togglePhase = useCallback((): void => setPhase((p) => (p === "name" ? "role" : "name")), []);
 
   // While open: page scroll paused (the stage stays pinned), Esc closes.
@@ -106,6 +185,8 @@ export function TeamStage({ members, eyebrow, hint, roleCue }: TeamStageProps) {
     body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === "Escape") close();
+      else if (e.key === "ArrowRight") navigate(1);
+      else if (e.key === "ArrowLeft") navigate(-1);
     };
     window.addEventListener("keydown", onKey);
     return () => {
@@ -113,7 +194,9 @@ export function TeamStage({ members, eyebrow, hint, roleCue }: TeamStageProps) {
       body.style.overflow = prev;
       lenis?.start();
     };
-  }, [openIndex, close, lenis]);
+  }, [openIndex, close, navigate, lenis]);
+
+  useSpotlightSwipe({ stageRef, enabled: openIndex !== null, dragX, onSwipe: navigate, reduce });
 
   // Focus: into the spotlight on open, back to the same tile on close.
   useEffect(() => {
@@ -146,7 +229,7 @@ export function TeamStage({ members, eyebrow, hint, roleCue }: TeamStageProps) {
           ref={stageRef}
           data-team-stage
           className="sticky top-0 isolate overflow-clip bg-[#030712] text-white"
-          style={{ height: "100svh", minHeight: "34rem" }}
+          style={{ height: "100svh", minHeight: "34rem", touchAction: openIndex === null ? undefined : "pan-y" }}
         >
           {/* Ambient glow, tinted by phase */}
           <motion.div
@@ -162,7 +245,7 @@ export function TeamStage({ members, eyebrow, hint, roleCue }: TeamStageProps) {
           />
 
           {/* Top bar */}
-          <div className="absolute inset-x-0 z-30 flex items-center justify-between" style={{ top: TOP_BAR, paddingInline: GUTTER }}>
+          <div data-team-chrome className="absolute inset-x-0 z-30 flex items-center justify-between" style={{ top: TOP_BAR, paddingInline: GUTTER }}>
             <span className="whitespace-nowrap text-[0.68rem] uppercase tracking-[0.22em] text-white/45" style={{ fontFamily: TEXT_FONT }}>
               ( {eyebrow} )
             </span>
@@ -222,6 +305,7 @@ export function TeamStage({ members, eyebrow, hint, roleCue }: TeamStageProps) {
                   member={member}
                   phase={phase}
                   pointer={pointer}
+                  dragX={dragX}
                   nameTint={NAME_TINT}
                   roleTint={ROLE_TINT}
                 />
@@ -229,7 +313,7 @@ export function TeamStage({ members, eyebrow, hint, roleCue }: TeamStageProps) {
             </AnimatePresence>
 
             {member ? (
-              <SpotlightPortrait key={member.slug} member={member} phase={phase} onToggle={togglePhase} pointer={pointer} roleCue={roleCue} />
+              <SpotlightPortrait key={member.slug} member={member} phase={phase} onToggle={togglePhase} pointer={pointer} roleCue={roleCue} dragX={dragX} />
             ) : null}
 
             {/* Outlined copy in front of the photo */}
@@ -241,6 +325,7 @@ export function TeamStage({ members, eyebrow, hint, roleCue }: TeamStageProps) {
                   member={member}
                   phase={phase}
                   pointer={pointer}
+                  dragX={dragX}
                   nameTint={NAME_TINT}
                   roleTint={ROLE_TINT}
                 />
@@ -250,6 +335,38 @@ export function TeamStage({ members, eyebrow, hint, roleCue }: TeamStageProps) {
             <AnimatePresence>
               {member && openIndex !== null && phase === "role" ? (
                 <TeamCard key={`card-${member.slug}`} member={member} index={openIndex} total={members.length} />
+              ) : null}
+            </AnimatePresence>
+
+            {/* Previous / next while open (swipe, trackpad and arrow keys do the same) */}
+            <AnimatePresence>
+              {member && openIndex !== null ? (
+                <motion.div
+                  key="switch"
+                  data-team-chrome
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE, delay: 0.45 } }}
+                  exit={{ opacity: 0, y: 12, transition: { duration: 0.25 } }}
+                  className="absolute z-30 flex gap-2"
+                  style={{ right: GUTTER, bottom: "clamp(1.25rem, 5svh, 2.75rem)" }}
+                >
+                  {([-1, 1] as const).map((dir) => {
+                    const disabled = dir < 0 ? openIndex === 0 : openIndex === members.length - 1;
+                    return (
+                      <button
+                        key={dir}
+                        type="button"
+                        aria-label={dir < 0 ? "Previous team member" : "Next team member"}
+                        data-cursor="magnetic"
+                        disabled={disabled}
+                        onClick={() => navigate(dir)}
+                        className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.04] text-white/75 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] transition-[background-color,color,opacity] duration-300 hover:bg-white/[0.1] hover:text-white focus-visible:outline-none focus-visible:shadow-[inset_0_0_0_1px_rgba(124,233,255,0.7)] disabled:pointer-events-none disabled:opacity-30"
+                      >
+                        {dir < 0 ? <ArrowLeft aria-hidden className="h-4 w-4" /> : <ArrowRight aria-hidden className="h-4 w-4" />}
+                      </button>
+                    );
+                  })}
+                </motion.div>
               ) : null}
             </AnimatePresence>
           </LayoutGroup>
