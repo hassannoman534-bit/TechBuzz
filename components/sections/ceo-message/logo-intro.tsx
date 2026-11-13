@@ -54,7 +54,7 @@ export function LogoIntro({ onDone }: LogoIntroProps): React.ReactElement {
     <motion.div
       key="ceo-logo-intro"
       role="presentation"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#030712]"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-[#030712]"
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: reduce ? 0.3 : 0.55, ease: EASE }}

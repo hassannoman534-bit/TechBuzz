@@ -10,7 +10,7 @@ const { portrait } = ceoMessage;
 
 /** Bottom of the cutout dissolves into the page instead of ending on a hard edge. */
 const FADE_MASK =
-  "linear-gradient(to bottom, #000 0%, #000 40%, rgba(0,0,0,0.6) 66%, rgba(0,0,0,0.18) 84%, transparent 97%)";
+  "linear-gradient(to bottom, #000 0%, #000 44%, rgba(0,0,0,0.62) 68%, rgba(0,0,0,0.2) 85%, transparent 98%)";
 
 type CeoPortraitProps = {
   /** Gates the entrance until the opening overlay is gone. */
@@ -20,13 +20,15 @@ type CeoPortraitProps = {
 /**
  * Phase 2 portrait. Travels in from the right and inward, then holds.
  *
- * On scroll it drifts up and dissolves, so the hero hands over to the message
- * stage rather than cutting. The bottom edge is masked at rest, which is what
- * blends the cutout into #030712 as the page moves under it.
+ * Placement: the box starts below the navbar, not at the top of the viewport. The
+ * navbar is fixed at top-0 and its pill reaches about 100px down, and with the
+ * portrait running full height his hair landed at the same 100px, so the pill cut
+ * straight across his head. The top inset is the clearance.
  *
- * The photo is warm and the site is violet, so two blend layers cool it into the
- * palette. They sit inside the masked wrapper, so they are shaped by the cutout
- * and never show as a rectangle.
+ * The image is object-cover anchored top, so he fills the right side and the torso
+ * bleeds off the bottom into the fade rather than being letterboxed with dead space
+ * above his head. The silhouette mask below has to use the same cover/top framing
+ * or the wash drifts off the subject.
  */
 export function CeoPortrait({ play }: CeoPortraitProps): React.ReactElement {
   const reduce = useReducedMotionSafe();
@@ -36,14 +38,13 @@ export function CeoPortrait({ play }: CeoPortraitProps): React.ReactElement {
     target: ref,
     offset: ["start start", "end start"],
   });
-  const driftY = useTransform(scrollYProgress, [0, 1], ["0%", "-14%"]);
-  const driftOpacity = useTransform(scrollYProgress, [0, 0.75], [1, 0]);
+  const driftY = useTransform(scrollYProgress, [0, 1], ["0%", "-12%"]);
+  const driftOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
   return (
     <motion.div
       ref={ref}
-      aria-hidden={false}
-      className="pointer-events-none absolute bottom-0 right-0 top-0 z-0 flex items-end justify-end overflow-hidden"
+      className="pointer-events-none absolute bottom-0 right-0 top-[40%] z-0 md:top-[clamp(5.5rem,11vh,7.5rem)] flex items-end justify-end overflow-hidden"
       style={
         reduce
           ? undefined
@@ -51,7 +52,7 @@ export function CeoPortrait({ play }: CeoPortraitProps): React.ReactElement {
       }
     >
       <motion.div
-        className="relative h-[66%] w-[92vw] translate-x-[6%] md:h-full md:w-[clamp(26rem,52vw,46rem)] md:translate-x-0"
+        className="relative h-full w-[94vw] translate-x-[6%] md:w-[clamp(28rem,54vw,52rem)] md:translate-x-[2%]"
         initial={
           reduce
             ? { opacity: 0 }
@@ -83,15 +84,16 @@ export function CeoPortrait({ play }: CeoPortraitProps): React.ReactElement {
             alt={portrait.alt}
             fill
             priority
-            sizes="(max-width: 768px) 92vw, 46rem"
-            className="select-none object-contain object-bottom"
+            sizes="(max-width: 768px) 94vw, 52rem"
+            className="select-none object-cover object-top"
             style={{ filter: "contrast(1.06) saturate(0.82) brightness(0.92)" }}
           />
 
           {/*
             The wash is masked with the cutout itself, so it takes his silhouette.
             A plain overlay layer would paint its own rectangle and leave hard seams
-            down the left edge and across the bottom.
+            down the left edge and across the bottom. Framing must match the Image
+            above: cover, anchored top.
           */}
           <span
             aria-hidden
@@ -102,15 +104,31 @@ export function CeoPortrait({ play }: CeoPortraitProps): React.ReactElement {
                 "linear-gradient(205deg, rgba(123,97,255,0.6) 0%, rgba(91,124,255,0.32) 48%, rgba(3,7,18,0) 82%)",
               maskImage: `url(${portrait.src})`,
               WebkitMaskImage: `url(${portrait.src})`,
-              maskSize: "contain",
-              WebkitMaskSize: "contain",
-              maskPosition: "bottom",
-              WebkitMaskPosition: "bottom",
+              maskSize: "cover",
+              WebkitMaskSize: "cover",
+              maskPosition: "top",
+              WebkitMaskPosition: "top",
               maskRepeat: "no-repeat",
               WebkitMaskRepeat: "no-repeat",
             }}
           />
         </div>
+
+        {/*
+          Edge vignettes. object-cover fills the box, so his shoulder meets the
+          container edge as a hard vertical cut. These dissolve both sides into the
+          page. The backdrop is already #030712, so they only hide the seam.
+        */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 left-0 w-[26%]"
+          style={{ background: "linear-gradient(to right, #030712, rgba(3,7,18,0))" }}
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 right-0 w-[14%]"
+          style={{ background: "linear-gradient(to left, #030712, rgba(3,7,18,0))" }}
+        />
       </motion.div>
     </motion.div>
   );

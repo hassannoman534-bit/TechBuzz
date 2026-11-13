@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useRef, useState } from "react";
+import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
 import { KineticText } from "@/components/ui/kinetic-text";
 import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
 import { ceoMessage, EASE } from "./ceo-message.config";
@@ -15,24 +15,33 @@ const { heading, signature } = ceoMessage;
 /**
  * Message From CEO, in three phases.
  *
- * 1. LogoIntro holds the screen, then unmounts through AnimatePresence so nothing
- *    is left in the DOM behind the page.
- * 2. The hero: the heading writes itself in from the left while the portrait comes
- *    in from the right, and the signature is laid down under the name. `introDone`
- *    gates all of it, so nothing is spent while it is hidden under the overlay.
+ * 1. LogoIntro holds the screen, then unmounts through AnimatePresence.
+ * 2. The hero: heading writes in from the left, portrait comes in from the right,
+ *    signature is laid down under the name. `introDone` gates all of it.
  * 3. PerspectiveMessage carries the message through the camera on scroll.
+ *
+ * The hero reserves the top of the viewport for the navbar, which is fixed at
+ * top-0 and about 100px tall, and centres its content in what is left. Without
+ * that reserve the pill cuts across the portrait's head and crowds the eyebrow.
  */
 export function CeoMessage(): React.ReactElement {
   const reduce = useReducedMotionSafe();
+  const heroRef = useRef<HTMLElement>(null);
   const [introDone, setIntroDone] = useState(false);
   const handleIntroDone = useCallback(() => setIntroDone(true), []);
+
+  // Copy leaves a touch faster than the portrait, which reads as depth.
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const copyY = useTransform(scrollYProgress, [0, 1], ["0%", "-22%"]);
+  const copyOpacity = useTransform(scrollYProgress, [0, 0.62], [1, 0]);
 
   const fade = (delay: number) => ({
     initial: { opacity: 0, y: 10 },
     animate: introDone ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 },
-    transition: reduce
-      ? { duration: 0.01 }
-      : { duration: 0.8, ease: EASE, delay },
+    transition: reduce ? { duration: 0.01 } : { duration: 0.8, ease: EASE, delay },
   });
 
   return (
@@ -41,19 +50,20 @@ export function CeoMessage(): React.ReactElement {
         {!introDone && <LogoIntro key="intro" onDone={handleIntroDone} />}
       </AnimatePresence>
 
-      <section className="relative isolate flex min-h-[max(44rem,94svh)] items-start overflow-hidden bg-[#030712] md:min-h-[clamp(34rem,92svh,60rem)] md:items-center">
+      <section
+        ref={heroRef}
+        className="relative isolate flex min-h-[100svh] items-start overflow-hidden bg-[#030712] pt-[clamp(5.5rem,11vh,7.5rem)] md:items-center"
+      >
         <CeoPortrait play={introDone} />
 
-        {/* Scrim: keeps the copy legible over the photo. Heavier on phones, where
-            the portrait sits behind the text instead of beside it. */}
+        {/* Scrims keep the copy legible over the photo. Phones stack, so theirs runs
+            top to bottom; desktop sits side by side, so theirs runs left to right. */}
         <span
           aria-hidden
           className="pointer-events-none absolute inset-0 z-[1] md:hidden"
           style={{
-            // Phones stack: copy on top, portrait under it. A sideways scrim here
-            // would sit over the whole photo and flatten him into a smudge.
             background:
-              "linear-gradient(to bottom, #030712 0%, #030712 44%, rgba(3,7,18,0.45) 62%, rgba(3,7,18,0.04) 78%, rgba(3,7,18,0.88) 100%)",
+              "linear-gradient(to bottom, #030712 0%, #030712 30%, rgba(3,7,18,0.72) 44%, rgba(3,7,18,0.3) 58%, rgba(3,7,18,0.02) 74%, rgba(3,7,18,0.9) 100%)",
           }}
         />
         <span
@@ -61,17 +71,27 @@ export function CeoMessage(): React.ReactElement {
           className="pointer-events-none absolute inset-0 z-[1] hidden md:block"
           style={{
             background:
-              "linear-gradient(to right, #030712 16%, rgba(3,7,18,0.72) 44%, rgba(3,7,18,0) 72%)",
+              "linear-gradient(100deg, #030712 14%, rgba(3,7,18,0.78) 40%, rgba(3,7,18,0.12) 66%, rgba(3,7,18,0) 80%)",
           }}
         />
 
-        <div className="relative z-10 mx-auto w-full max-w-[88rem] px-[clamp(1.25rem,6vw,8rem)] pb-[clamp(3rem,8vh,6rem)] pt-[clamp(8rem,18vh,11rem)]">
-          <div className="max-w-[44rem] text-left">
-            <motion.span
-              className="font-footer-text block text-[0.68rem] uppercase tracking-[0.28em] whitespace-nowrap text-white/40"
-              {...fade(0)}
-            >
-              {heading.eyebrow}
+        <motion.div
+          className="relative z-10 mx-auto w-full max-w-[102rem] px-[clamp(1.25rem,5vw,5.5rem)] pb-[clamp(5rem,12vh,8rem)]"
+          style={reduce ? undefined : { y: copyY, opacity: copyOpacity }}
+        >
+          <div className="max-w-[42rem] text-left">
+            <motion.span className="flex items-center gap-4" {...fade(0)}>
+              <span
+                aria-hidden
+                className="block h-px w-[clamp(1.5rem,4vw,3rem)] shrink-0"
+                style={{
+                  background:
+                    "linear-gradient(90deg, rgba(201,194,255,0.55), rgba(201,194,255,0.08))",
+                }}
+              />
+              <span className="font-footer-text text-[0.68rem] uppercase tracking-[0.3em] whitespace-nowrap text-white/45">
+                {heading.eyebrow}
+              </span>
             </motion.span>
 
             <KineticText
@@ -82,40 +102,53 @@ export function CeoMessage(): React.ReactElement {
               stagger={0.026}
               radius={120}
               lift={12}
-              className="mt-[clamp(0.9rem,2.6vh,1.5rem)]"
+              className="mt-[clamp(1rem,2.8vh,1.6rem)]"
               style={{
-                fontSize: "clamp(2.1rem,6.2vw,5rem)",
-                lineHeight: 1.04,
-                letterSpacing: "-0.035em",
+                fontSize: "clamp(2.1rem,6vw,4.75rem)",
+                lineHeight: 1.02,
+                letterSpacing: "-0.038em",
               }}
             />
 
-            <SignatureReveal
-              play={introDone}
-              delay={0.9}
-              className="mt-[clamp(1.1rem,3vh,1.9rem)]"
-            />
-
-            <motion.span
-              className="font-footer-text mt-3 block text-[0.7rem] uppercase tracking-[0.24em] whitespace-nowrap text-white/40"
-              {...fade(1.5)}
-            >
-              {signature.role}, {signature.company}
-            </motion.span>
+            <div className="mt-[clamp(1.2rem,3.2vh,2rem)] flex flex-wrap items-end gap-x-7 gap-y-3">
+              <SignatureReveal play={introDone} delay={0.9} />
+              <motion.span
+                className="font-footer-text pb-1 text-[0.7rem] uppercase tracking-[0.24em] whitespace-nowrap text-white/40"
+                {...fade(1.2)}
+              >
+                {signature.role}
+              </motion.span>
+            </div>
 
             <motion.p
-              className="font-footer-text mt-[clamp(1.4rem,3.6vh,2.2rem)] max-w-md text-[clamp(0.95rem,1.4vw,1.08rem)] leading-relaxed text-white/55"
-              {...fade(1.7)}
+              className="font-footer-text mt-[clamp(1.3rem,3.4vh,2rem)] max-w-sm text-[clamp(0.95rem,1.35vw,1.06rem)] leading-relaxed text-white/50"
+              {...fade(1.45)}
             >
               {heading.sub}
             </motion.p>
           </div>
-        </div>
+        </motion.div>
+
+        {/* Hero scroll cue, matching the one on the stage below. */}
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute bottom-[clamp(2.25rem,5.5vh,3.75rem)] left-[clamp(1.25rem,5vw,5.5rem)] z-10 flex items-center gap-3"
+          {...fade(1.75)}
+        >
+          <span
+            className="block h-px w-10"
+            style={{
+              background: "linear-gradient(90deg, rgba(201,194,255,0.5), rgba(3,7,18,0))",
+            }}
+          />
+          <span className="font-footer-text text-[0.62rem] uppercase tracking-[0.28em] whitespace-nowrap text-white/30">
+            {heading.cue}
+          </span>
+        </motion.div>
       </section>
 
       <PerspectiveMessage />
 
-      {/* Breathing room so the stage never butts into the footer dissolve. */}
       <div aria-hidden className="w-full bg-[#030712]" style={{ height: "clamp(4rem,12vh,8rem)" }} />
     </>
   );
