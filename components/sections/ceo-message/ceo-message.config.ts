@@ -85,27 +85,41 @@ export const ceoMessage: CeoMessageContent = {
 /** Site easing. Strong ease out: fast on entry, settles late. */
 export const EASE = [0.22, 1, 0.36, 1] as const;
 
-/** Phase 3 stage geometry. Inline styles only, never Tailwind arbitrary values. */
+/**
+ * Phase 3 stage geometry. Inline styles only, never Tailwind arbitrary values.
+ *
+ * Depth is built per line, from scale and translate, not from a CSS perspective
+ * on the block. Chrome cannot map glyphs through a projective matrix exactly,
+ * so it approximates the warp in chunks, and the chunks disagree: half of each
+ * line renders sheared and the rest upright. Measured at this text size: clean
+ * at 16deg of tilt, creeping back at 28, unmistakable at 45. That ceiling is
+ * far too flat to read as three dimensional.
+ *
+ * Scale and translate are affine, so the browser applies them exactly and
+ * re-rasterises the type at its new size. The result is a far stronger tunnel
+ * than any tilt could give, and every line stays sharp at every size.
+ */
 export const STAGE = {
   heightVh: 260,
   /**
-   * Lens length. The first draft used 200px and it is why the block read as
-   * amateur: Chrome cannot map glyphs through a perspective matrix exactly, so
-   * it approximates the warp in chunks, and at a short lens the chunks
-   * disagree enough that half of each line comes out looking italic while the
-   * rest stays upright. It is visible at 700 and gone by 1800. The plane still
-   * fans with depth at this length, the type just stays type.
+   * Virtual lens, as a share of viewport height. Each line is projected along
+   * Y only: m = f / (f - v), where v is how far the line sits below the focal
+   * line. 1.125 puts a line half a viewport below focus at about 1.8x.
+   * Smaller = more aggressive.
    */
-  perspectivePx: 1800,
-  /** Phones get a longer lens again. A short viewport puts lines nearer. */
-  perspectivePxMobile: 2400,
+  lensVhRatio: 1.125,
+  /** Where the tunnel's focal line sits, as a share of viewport height. */
+  focusVhRatio: 0.46,
+  /** Guards against the blow-up as a line approaches the lens. */
+  scaleMin: 0.42,
+  scaleMax: 2.3,
+  /** Far lines dissolve rather than shrinking to an unreadable speck. */
+  fadeBelowScale: 0.86,
   mobileMaxWidth: 640,
-  /** Plane tilt. Shallower than the first draft for the same reason. */
-  tiltDeg: 16,
   /** Where the block starts, below and near the camera. */
-  travelMinPx: 300,
-  travelMaxPx: 520,
-  travelVhRatio: 0.45,
+  travelMinPx: 320,
+  travelMaxPx: 560,
+  travelVhRatio: 0.5,
   /**
    * Extra distance past the block's own height, so the last line finishes its
    * pass and the stage is empty before it unpins.
@@ -119,7 +133,7 @@ export const STAGE = {
   /**
    * Fade the stage over the final stretch. Every percent left between this and
    * 1 is a blank screen the reader has to scroll past before the sign off
-   * arrives, and the section is 300vh, so 0.85 cost about 250px of nothing.
+   * arrives, so this was measured rather than guessed.
    */
   fadeStart: 0.97,
   /** Measure for the message column, in rem. Keeps the lines from running long. */

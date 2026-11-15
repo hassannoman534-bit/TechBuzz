@@ -92,8 +92,13 @@ export function CeoMessage(): React.ReactElement {
           >
             <h1 className="sr-only">{heading.srHeading}</h1>
 
+            {/*
+              Centred over the word rather than ranged left with it. The column
+              is the word's own box, so centring inside the column puts the line
+              across the middle of "Belief" instead of above its first letter.
+            */}
             <motion.p
-              className="font-footer-text max-w-[46ch] text-[clamp(0.92rem,1.2vw,1.06rem)] leading-relaxed text-white/55"
+              className="font-footer-text mx-auto max-w-[46ch] text-center text-[clamp(0.92rem,1.2vw,1.06rem)] leading-relaxed text-white/55"
               {...fade(0)}
             >
               {heading.sub}
