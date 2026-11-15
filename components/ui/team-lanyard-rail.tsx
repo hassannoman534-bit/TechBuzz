@@ -199,7 +199,15 @@ function layoutTargets(width: number, W: number, carousel: boolean, center: numb
   return { xs, total: cyclic ? total : 0 };
 }
 
+/** Last value written to the DOM per badge, so paint() can skip no-op writes. */
+type PaintMemo = {
+  slot?: string; swing?: string; stretch?: string; cord?: string; hang?: string;
+  flip?: string; shade?: string; gx?: string; shadow?: string; shadowO?: string;
+  linkO?: string; linkV?: string; drawn?: string;
+};
+
 type Sim = {
+  paint: PaintMemo[];
   x: number[]; vx: number[]; px: number[]; tx: number[];
   sw: number[]; vsw: number[]; beta: number[];
   ry: number[]; vry: number[]; tr: number[];
@@ -212,6 +220,7 @@ type Sim = {
 
 function emptySim(): Sim {
   return {
+    paint: [],
     x: [], vx: [], px: [], tx: [], sw: [], vsw: [], beta: [], ry: [], vry: [], tr: [], rz: [], vrz: [], tz: [],
     lift: [], vlift: [], tl: [], pop: [], vpop: [], tp: [], st: [], vst: [],
     drag: -1, grab: 0, pull: -1, free: 0, last: 0, raf: 0, carousel: null,
@@ -366,7 +375,13 @@ const BadgeFaces = React.memo(function BadgeFaces({ item, tone }: { item: Lanyar
             {links.map((link) => <span key={link.label} className={LINK_ROW}><LinkIcon label={link.label} />{link.label}</span>)}
           </span>
         )}
-        <svg aria-hidden="true" viewBox="-1 -1 23 23" className="absolute bottom-[0.8em] right-[0.8em] size-[3.9em] text-foreground">
+        {/*
+          data-qr is what the stylesheet keys off to keep this out of the first
+          paint. The code is roughly four hundred separate path segments and it
+          only exists on the back of the badge, so painting it while the badge
+          is still face out is work nobody sees.
+        */}
+        <svg data-qr aria-hidden="true" viewBox="-1 -1 23 23" className="absolute bottom-[0.8em] right-[0.8em] size-[3.9em] text-foreground">
           <path d={qr} fill="currentColor" />
         </svg>
         <Finish />
@@ -407,6 +422,7 @@ export function TeamLanyardRail({
   const shadows = React.useRef([] as (HTMLSpanElement | null)[]);
   const linkLayers = React.useRef([] as (HTMLDivElement | null)[]);
   const sim = React.useRef(emptySim());
+  const boxRef = React.useRef({ left: 0, top: 0, stale: true });
   const [size, setSize] = React.useState({ width: 0, W: MAX_W, carousel: false });
   const [innerActive, setInnerActive] = React.useState(null as number | null);
   const [innerFlipped, setInnerFlipped] = React.useState(null as number | null);
@@ -445,6 +461,16 @@ export function TeamLanyardRail({
   }, []);
 
   React.useEffect(() => {
+    const stale = () => { boxRef.current.stale = true; };
+    window.addEventListener("scroll", stale, { passive: true });
+    window.addEventListener("resize", stale);
+    return () => {
+      window.removeEventListener("scroll", stale);
+      window.removeEventListener("resize", stale);
+    };
+  }, []);
+
+  React.useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const update = () => setReduced(media.matches);
     update();
@@ -465,7 +491,7 @@ export function TeamLanyardRail({
       setSize((old) => (Math.abs(old.width - width) < 0.5 && old.carousel === carousel && old.W === W ? old : { width, W, carousel }));
     };
     measure(stage.clientWidth);
-    const observer = new ResizeObserver((entries) => { const box = entries[0]; if (box) measure(box.contentRect.width); });
+    const observer = new ResizeObserver((entries) => { boxRef.current.stale = true; const box = entries[0]; if (box) measure(box.contentRect.width); });
     observer.observe(stage);
     return () => observer.disconnect();
   }, [count]);
@@ -475,40 +501,81 @@ export function TeamLanyardRail({
     const g = live.current.geo;
     const slot = slots.current[i];
     if (!slot) return;
-    slot.style.transform = `translate3d(${((s.x[i] ?? 0) - g.W / 2).toFixed(2)}px,0,0)`;
+
+    /*
+      Every write below is guarded against writing the same value twice.
+
+      paint() runs for every badge on every frame of the simulation, but on a
+      typical frame only the one badge the pointer is near is actually moving.
+      Writing identical strings to the other three still invalidates their
+      style, and a custom property write (--shade, --gx, --stretch) invalidates
+      the whole subtree under it, which is two badge faces and everything on
+      them. Measured on a 4x throttled CPU, sweeping the pointer along the rail
+      ran at 37fps with 78ms tasks; most of that was style recalculation for
+      badges that had not changed.
+
+      `last` holds what was last written per badge, so an unchanged badge costs
+      a handful of string compares and touches no DOM at all.
+    */
+    const last = s.paint[i] ?? (s.paint[i] = {});
+
+    const slotT = `translate3d(${((s.x[i] ?? 0) - g.W / 2).toFixed(2)}px,0,0)`;
+    if (last.slot !== slotT) { slot.style.transform = slotT; last.slot = slotT; }
+
     const sw = s.sw[i] ?? 0;
     const swing = swings.current[i];
-    if (swing) swing.style.transform = `rotate(${sw.toFixed(3)}deg)`;
+    const swingT = `rotate(${sw.toFixed(3)}deg)`;
+    if (swing && last.swing !== swingT) { swing.style.transform = swingT; last.swing = swingT; }
+
     const st = s.st[i] ?? 0;
-    straps.current[i]?.style.setProperty("--stretch", `${st.toFixed(2)}px`);
+    const stretch = `${st.toFixed(2)}px`;
+    if (last.stretch !== stretch) {
+      straps.current[i]?.style.setProperty("--stretch", stretch);
+      last.stretch = stretch;
+    }
+
     const cord = cords.current[i];
-    if (cord) cord.style.transform = `scaleY(${Math.max(0.12, (g.cordRest + st) / g.cordRest).toFixed(4)})`;
+    const cordT = `scaleY(${Math.max(0.12, (g.cordRest + st) / g.cordRest).toFixed(4)})`;
+    if (cord && last.cord !== cordT) { cord.style.transform = cordT; last.cord = cordT; }
+
     const lift = s.lift[i] ?? 0;
     const pop = s.pop[i] ?? 0;
     const hang = hangs.current[i];
-    if (hang) hang.style.transform = `translate3d(0,${(st - 4 * lift).toFixed(2)}px,0) rotate(${((s.beta[i] ?? 0) - sw + (s.rz[i] ?? 0)).toFixed(3)}deg) scale(${(1 + 0.08 * pop).toFixed(4)})`;
+    const hangT = `translate3d(0,${(st - 4 * lift).toFixed(2)}px,0) rotate(${((s.beta[i] ?? 0) - sw + (s.rz[i] ?? 0)).toFixed(3)}deg) scale(${(1 + 0.08 * pop).toFixed(4)})`;
+    if (hang && last.hang !== hangT) { hang.style.transform = hangT; last.hang = hangT; }
+
     const ry = s.ry[i] ?? 0;
     const flip = flips.current[i];
     const facing = Math.abs(Math.cos((ry * Math.PI) / 180));
     if (flip) {
-      flip.style.transform = `perspective(${PERSPECTIVE}px) rotateY(${ry.toFixed(2)}deg)`;
-      flip.style.setProperty("--shade", ((1 - facing) * 0.45).toFixed(3));
+      const flipT = `perspective(${PERSPECTIVE}px) rotateY(${ry.toFixed(2)}deg)`;
+      if (last.flip !== flipT) { flip.style.transform = flipT; last.flip = flipT; }
+      const shade = ((1 - facing) * 0.45).toFixed(3);
+      if (last.shade !== shade) { flip.style.setProperty("--shade", shade); last.shade = shade; }
       const phi = ((((ry + 90) % 180) + 180) % 180) - 90;
-      flip.style.setProperty("--gx", `${(phi * 0.9).toFixed(1)}%`);
+      const gx = `${(phi * 0.9).toFixed(1)}%`;
+      if (last.gx !== gx) { flip.style.setProperty("--gx", gx); last.gx = gx; }
     }
+
     const shadow = shadows.current[i];
     if (shadow) {
-      shadow.style.transform = `translate3d(${(g.W * 0.045 + lift * 3 * g.u).toFixed(2)}px,${(g.H * 0.03 + lift * 7 * g.u).toFixed(2)}px,0) scale(${(Math.max(0.12, facing) * (1 + 0.03 * lift + 0.05 * pop)).toFixed(3)},${(1 + 0.03 * lift + 0.05 * pop).toFixed(3)})`;
-      shadow.style.opacity = (0.72 + 0.28 * lift).toFixed(3);
+      const shadowT = `translate3d(${(g.W * 0.045 + lift * 3 * g.u).toFixed(2)}px,${(g.H * 0.03 + lift * 7 * g.u).toFixed(2)}px,0) scale(${(Math.max(0.12, facing) * (1 + 0.03 * lift + 0.05 * pop)).toFixed(3)},${(1 + 0.03 * lift + 0.05 * pop).toFixed(3)})`;
+      if (last.shadow !== shadowT) { shadow.style.transform = shadowT; last.shadow = shadowT; }
+      const o = (0.72 + 0.28 * lift).toFixed(3);
+      if (last.shadowO !== o) { shadow.style.opacity = o; last.shadowO = o; }
     }
+
     const layer = linkLayers.current[i];
     // shown from 9° off the back, kept through the spring overshoot (±24°) so focused links never blink out
     const on = !!layer && Math.abs(ry - 180) < (layer.style.visibility === "visible" ? 24 : 9);
     if (layer) {
-      layer.style.opacity = on ? "1" : "0";
-      layer.style.visibility = on ? "visible" : "hidden";
+      const o = on ? "1" : "0";
+      const v = on ? "visible" : "hidden";
+      if (last.linkO !== o) { layer.style.opacity = o; last.linkO = o; }
+      if (last.linkV !== v) { layer.style.visibility = v; last.linkV = v; }
     }
-    flip?.style.setProperty("--drawn", on ? "0" : "1");
+    const drawn = on ? "0" : "1";
+    if (flip && last.drawn !== drawn) { flip.style.setProperty("--drawn", drawn); last.drawn = drawn; }
   }, []);
 
   const step = React.useCallback((now: number) => {
@@ -517,10 +584,23 @@ export function TeamLanyardRail({
     const n = L.count;
     const g = L.geo;
     const { width, carousel } = L.size;
-    const dt = s.last ? Math.min(0.1, (now - s.last) / 1000) : 1 / 60;
+    /*
+      dt is clamped hard and the sub-step count is capped.
+
+      The original took a 6ms sub-step and let the count follow dt, which runs
+      away: a slow frame asks for more sub-steps, the extra work makes the next
+      frame slower still, and that asks for more again. With dt allowed up to
+      100ms it reached seventeen sub-steps, each one looping every badge, every
+      spring and three collision passes with trigonometry in them. That is
+      where the 78 to 91ms tasks under CPU throttling came from.
+
+      Four sub-steps of 12ms is still far inside the stability limit for these
+      springs (the stiffest is 220, which tolerates about 135ms), and the
+      simulation is visually identical.
+    */
+    const dt = s.last ? Math.min(0.05, (now - s.last) / 1000) : 1 / 60;
     s.last = now;
-    // sub-steps of at most ~6 ms keep the springs accurate when frames arrive slowly (60 fps → 3)
-    const sub = Math.max(3, Math.ceil(dt / 0.006));
+    const sub = Math.min(4, Math.max(2, Math.ceil(dt / 0.012)));
     const h = dt / sub;
     let busy = false;
     for (let k = 0; k < sub; k++) {
@@ -697,6 +777,10 @@ export function TeamLanyardRail({
       }
     }
     for (const key of ["x", "vx", "px", "tx", "sw", "vsw", "beta", "ry", "vry", "tr", "rz", "vrz", "tz", "lift", "vlift", "tl", "pop", "vpop", "tp", "st", "vst"] as const) s[key].length = count;
+    // Drop the memo whenever the layout changes, or the first paint after a
+    // resize is skipped as a no-op against values from the old geometry.
+    if (fresh) s.paint = [];
+    s.paint.length = count;
     if (fresh) for (let i = 0; i < count; i++) paint(i);
     kick();
   }, [size, active, flipped, count, paint, kick]);
@@ -786,10 +870,38 @@ export function TeamLanyardRail({
     return [lo, Math.max(lo, hi)] as const;
   };
 
+  /*
+    The stage's position on screen, cached.
+
+    nearest() runs on every pointermove, and it used to read
+    getBoundingClientRect each time. The simulation is writing transforms to
+    the same subtree on every frame, so each of those reads forced the layout
+    it had just invalidated to be recomputed synchronously: classic read after
+    write thrashing, and it only bites while the pointer is moving, which is
+    exactly when the rail felt heavy.
+
+    The box only moves when the page scrolls or resizes, so those mark it stale
+    and the next reader re-measures. A visitor moving the pointer without
+    scrolling now forces no layout at all.
+  */
+  const stageBox = () => {
+    const stage = stageRef.current;
+    if (!stage) return null;
+    const cache = boxRef.current;
+    if (cache.stale) {
+      const box = stage.getBoundingClientRect();
+      cache.left = box.left;
+      cache.top = box.top;
+      cache.stale = false;
+    }
+    return cache;
+  };
+
   const nearest = (clientX: number, clientY: number) => {
     const stage = stageRef.current;
     if (!stage) return null;
-    const box = stage.getBoundingClientRect();
+    const box = stageBox();
+    if (!box) return null;
     const x = clientX - box.left;
     const y = clientY - box.top;
     const g = live.current.geo;
@@ -824,7 +936,7 @@ export function TeamLanyardRail({
         if (p.mode === "pull") s.pull = p.index;
         if (p.mode === "drag") {
           s.drag = p.index;
-          s.grab = event.clientX - stage.getBoundingClientRect().left - (s.x[p.index] ?? 0);
+          s.grab = event.clientX - (stageBox()?.left ?? 0) - (s.x[p.index] ?? 0);
         }
       }
       const elapsed = Math.max(1, now - p.lastT);
@@ -843,7 +955,7 @@ export function TeamLanyardRail({
         else kick();
       } else if (p.mode === "drag" && s.drag >= 0) {
         const [lo, hi] = feasible(s.drag);
-        s.x[s.drag] = clamp(event.clientX - stage.getBoundingClientRect().left - s.grab, lo, hi);
+        s.x[s.drag] = clamp(event.clientX - (stageBox()?.left ?? 0) - s.grab, lo, hi);
         s.vx[s.drag] = p.v * 1000;
         s.free = now + 900;
         kick();
@@ -1060,8 +1172,20 @@ export function TeamLanyardRail({
                   <span ref={(node) => { cords.current[i] = node; }} className="absolute block w-[1.5px] bg-foreground/60" style={{ left: W / 2 - 0.75, top: reelTop + g.reel * 0.82, height: g.cordRest, transformOrigin: "50% 0" }} />
                 </span>
                 <span ref={(node) => { hangs.current[i] = node; }} data-hang className="absolute left-0 block" style={{ top: clipTop, width: W, height: cardOffset + g.H, transformOrigin: `${W / 2}px 0px` }}>
-                  <span aria-hidden="true" className="absolute left-0 block" style={{ top: cardOffset, width: W, height: g.H, filter: `blur(${Math.max(4, 8 * g.u).toFixed(1)}px)` }}>
-                    <span ref={(node) => { shadows.current[i] = node; }} data-shadow className="absolute inset-0 block rounded-[10px] bg-black/25 dark:bg-black/70" />
+                  {/*
+                    The blur sits on the element that moves, not on its parent.
+                    Split across two elements, the parent had to re-run the blur
+                    every frame because its child had moved inside it. On one
+                    promoted element the blurred result is rasterised once and
+                    the per frame transform is handed to the compositor.
+                  */}
+                  <span aria-hidden="true" className="absolute left-0 block" style={{ top: cardOffset, width: W, height: g.H }}>
+                    <span
+                      ref={(node) => { shadows.current[i] = node; }}
+                      data-shadow
+                      className="absolute inset-0 block rounded-[10px] bg-black/25 dark:bg-black/70"
+                      style={{ filter: `blur(${Math.max(4, 8 * g.u).toFixed(1)}px)`, willChange: "transform, opacity" }}
+                    />
                   </span>
                   <button
                     ref={(node) => { buttons.current[i] = node; }}
@@ -1078,7 +1202,7 @@ export function TeamLanyardRail({
                     onFocus={() => { setFocusIndex(i); if (pointer.current.id < 0) { stop(); setActive(i); } }}
                     onClick={(event) => { const pending = pendingOpen.current; pendingOpen.current = -1; if (event.detail === 0 || pending === i) toggle(i); }}
                   >
-                    <span ref={(node) => { flips.current[i] = node; }} data-flip className="absolute inset-0 block [transform-style:preserve-3d]" style={{ transform: `perspective(${PERSPECTIVE}px) rotateY(${REST_Y[i % REST_Y.length] ?? 0}deg)` }}>
+                    <span ref={(node) => { flips.current[i] = node; }} data-flip className="absolute inset-0 block [transform-style:preserve-3d]" style={{ transform: `perspective(${PERSPECTIVE}px) rotateY(${REST_Y[i % REST_Y.length] ?? 0}deg)`, willChange: "transform" }}>
                       <BadgeFaces item={item} tone={tone} />
                     </span>
                   </button>

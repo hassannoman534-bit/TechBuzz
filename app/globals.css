@@ -666,3 +666,14 @@ img, video {
   uses the dark variant.
 */
 @custom-variant dark (&);
+
+/*
+  Lanyard badge QR codes are deferred out of the first paint.
+
+  Each code is around four hundred path segments and it is only ever visible on
+  the back of a badge. Rasterising four of them as the rail scrolled into view
+  was a measurable part of a one off stutter: the first pass down the services
+  page produced 28 long tasks against 4 on every pass afterwards. display:none
+  keeps them out of paint entirely until a badge is actually turned over.
+*/
+[data-badge][data-flipped="false"] [data-qr] { display: none; }

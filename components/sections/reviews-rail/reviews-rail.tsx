@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion, useInView } from "framer-motion";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion, useInView } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
 import TeamLanyardRail from "@/components/ui/team-lanyard-rail";
@@ -98,7 +98,26 @@ export function ReviewsRail({ className, autoplay = true }: ReviewsRailProps): R
     hovering a second badge while the first is still turned over.
   */
   const selected = active ?? flipped;
-  const review = selected === null ? null : reviews[selected] ?? null;
+
+  /*
+    The quote under the rail follows the selection, but not instantly while the
+    pointer is only passing through. Sweeping along the rail changes `active`
+    once per badge, and each change was swapping a full paragraph in and out
+    with a sequential crossfade, so a single sweep queued several hundred
+    milliseconds of animation over a block of text big enough to relayout.
+    A flip is deliberate, so that still lands immediately.
+  */
+  const [shown, setShown] = useState<number | null>(null);
+  useEffect(() => {
+    if (flipped !== null) {
+      setShown(flipped);
+      return;
+    }
+    const t = window.setTimeout(() => setShown(selected), selected === null ? 180 : 140);
+    return () => window.clearTimeout(t);
+  }, [selected, flipped]);
+
+  const review = shown === null ? null : reviews[shown] ?? null;
 
   const onActiveChange = useCallback((index: number | null) => {
     setActive(index);
@@ -106,17 +125,31 @@ export function ReviewsRail({ className, autoplay = true }: ReviewsRailProps): R
     // without this the rail ends up with two badges open at once.
     setFlipped((current) => (current !== null && current !== index ? null : current));
   }, []);
-  const onFlippedChange = useCallback((index: number | null) => setFlipped(index), []);
+  /*
+    Autoplay demonstrates the rail once and then rests. Left running it wakes
+    the simulation every couple of seconds for as long as the section is on
+    screen, which on a slow machine is a permanent drip of work for a section
+    the visitor may already have read. One pass through the badges is enough to
+    show that they turn over.
+  */
+  const [demoed, setDemoed] = useState(false);
+  const seen = useRef<Set<number>>(new Set());
+  const onFlippedChange = useCallback((index: number | null) => {
+    setFlipped(index);
+    if (index === null) return;
+    seen.current.add(index);
+    if (seen.current.size >= reviews.length) setDemoed(true);
+  }, []);
 
   return (
-    <div ref={ref} data-atmo="quiet">
+    <div ref={ref}>
       <TeamLanyardRail
         items={items}
         eyebrow={reviewsContent.eyebrow}
         heading={reviewsContent.heading}
         caption={reviewsContent.caption}
         labels={reviewsContent.labels}
-        autoplay={autoplay && inView && !reduce}
+        autoplay={autoplay && inView && !reduce && !demoed}
         active={active}
         onActiveChange={onActiveChange}
         flipped={flipped}
@@ -143,14 +176,12 @@ export function ReviewsRail({ className, autoplay = true }: ReviewsRailProps): R
               footer, so a taller quote moves the footer down and nothing else.
             */}
             <div className="min-h-[clamp(5.5rem,9vh,6.5rem)]">
-              <AnimatePresence mode="wait" initial={false}>
-                {review ? (
+              {review ? (
                   <motion.figure
                     key={review.id}
-                    initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                    initial={reduce ? { opacity: 0 } : { opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={reduce ? { opacity: 0 } : { opacity: 0, y: -6 }}
-                    transition={reduce ? { duration: 0.01 } : { duration: 0.4, ease: EASE }}
+                    transition={reduce ? { duration: 0.01 } : { duration: 0.3, ease: EASE }}
                   >
                     <blockquote
                       className="font-footer-text text-balance text-[clamp(0.95rem,1.15vw,1.08rem)] leading-relaxed text-white/80"
@@ -168,14 +199,12 @@ export function ReviewsRail({ className, autoplay = true }: ReviewsRailProps): R
                     key="idle"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={reduce ? { duration: 0.01 } : { duration: 0.35, ease: EASE }}
+                    transition={reduce ? { duration: 0.01 } : { duration: 0.3, ease: EASE }}
                     className="font-footer-text text-[clamp(0.95rem,1.15vw,1.08rem)] leading-relaxed text-white/35"
                   >
                     {reviewsContent.idle}
                   </motion.p>
                 )}
-              </AnimatePresence>
             </div>
 
             <div aria-hidden className="horizon mx-auto mt-6 w-full max-w-[22rem]" />

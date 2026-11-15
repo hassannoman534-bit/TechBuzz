@@ -1,0 +1,668 @@
+@import "tailwindcss";
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   1. TOKENS  (next-gen design system — Void / Nebula / Ion / Aurora)
+═════════════════════════════════════════════════════════════════════════════ */
+@theme {
+  /* Foundation */
+  --color-void: #030712;
+  --color-void-raised: #070b16;
+  --color-void-elevated: #0c1222;
+  --color-ink: #e7eaf3;
+  --color-ink-muted: #8a93a6;
+  --color-ink-faint: #4b5466;
+  --color-line: rgb(255 255 255 / 0.08);
+  --color-line-strong: rgb(255 255 255 / 0.14);
+
+  /* Accents: core / deep / soft */
+  --color-nebula: #7b61ff;
+  --color-nebula-deep: #2b1a7a;
+  --color-nebula-soft: #b4a6ff;
+  --color-ion: #22d8ff;
+  --color-ion-deep: #053a4d;
+  --color-ion-soft: #9befff;
+  --color-aurora: #2cf5b0;
+  --color-aurora-deep: #06402f;
+
+  /* Legacy aliases — keep existing components working; migrate later */
+  --color-bg-base: var(--color-void);
+  --color-bg-surface: var(--color-void-raised);
+  --color-bg-surface-2: var(--color-void-elevated);
+  --color-neon-cyan: var(--color-ion);
+  --color-neon-violet: var(--color-nebula);
+  --color-neon-emerald: var(--color-aurora);
+  --color-fg-primary: var(--color-ink);
+  --color-fg-muted: var(--color-ink-muted);
+  --color-fg-subtle: var(--color-ink-faint);
+
+  /* Motion */
+  --ease-atmo: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   2. ATMOSPHERE ENGINE
+═════════════════════════════════════════════════════════════════════════════ */
+@property --atmo-a  { syntax: "<color>";      inherits: true; initial-value: transparent; }
+@property --atmo-b  { syntax: "<color>";      inherits: true; initial-value: transparent; }
+@property --atmo-ax { syntax: "<percentage>"; inherits: true; initial-value: 20%; }
+@property --atmo-ay { syntax: "<percentage>"; inherits: true; initial-value: -10%; }
+@property --atmo-bx { syntax: "<percentage>"; inherits: true; initial-value: 85%; }
+@property --atmo-by { syntax: "<percentage>"; inherits: true; initial-value: 55%; }
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    /* Floating navbar clearance (top offset 16px + pill height ≈ 52px, rounded up with margin)
+       so the Signature Reveal lockup never sits under the nav. */
+    --nav-offset: 6.5rem;
+    /* default = hero scene */
+    --atmo-a: rgb(123 97 255 / 0.22);
+    --atmo-b: rgb(34 216 255 / 0.10);
+    --atmo-ax: 20%; --atmo-ay: -10%;
+    --atmo-bx: 85%; --atmo-by: 55%;
+    transition:
+      --atmo-a 1.6s var(--ease-atmo),
+      --atmo-b 1.6s var(--ease-atmo),
+      --atmo-ax 2.2s var(--ease-atmo),
+      --atmo-ay 2.2s var(--ease-atmo),
+      --atmo-bx 2.2s var(--ease-atmo),
+      --atmo-by 2.2s var(--ease-atmo);
+  }
+
+  :root[data-atmo="intro"]    { --atmo-a: rgb(123 97 255 / 0.08); --atmo-b: rgb(34 216 255 / 0.04); --atmo-ax: 10%; --atmo-ay: 20%; --atmo-bx: 90%; --atmo-by: 80%; }
+  :root[data-atmo="services"] { --atmo-a: rgb(34 216 255 / 0.14); --atmo-b: rgb(123 97 255 / 0.08); --atmo-ax: 82%; --atmo-ay: 15%; --atmo-bx: 12%; --atmo-by: 85%; }
+  :root[data-atmo="work"]     { --atmo-a: rgb(123 97 255 / 0.05); --atmo-b: rgb(34 216 255 / 0.03); --atmo-ax: 50%; --atmo-ay: 0%;  --atmo-bx: 50%; --atmo-by: 100%; }
+  :root[data-atmo="pricing"]  { --atmo-a: rgb(123 97 255 / 0.16); --atmo-b: rgb(34 216 255 / 0.06); --atmo-ax: 50%; --atmo-ay: 40%; --atmo-bx: 50%; --atmo-by: 100%; }
+  :root[data-atmo="quiet"]    { --atmo-a: rgb(123 97 255 / 0.04); --atmo-b: rgb(34 216 255 / 0.02); --atmo-ax: 20%; --atmo-ay: 30%; --atmo-bx: 80%; --atmo-by: 70%; }
+  :root[data-atmo="cta"]      { --atmo-a: rgb(123 97 255 / 0.26); --atmo-b: rgb(34 216 255 / 0.18); --atmo-ax: 30%; --atmo-ay: 75%; --atmo-bx: 75%; --atmo-by: 65%; }
+
+  html { background-color: var(--color-void); color: var(--color-ink); }
+  ::selection { background: color-mix(in oklch, var(--color-nebula) 45%, transparent); color: #fff; }
+  :focus-visible { outline: 1px solid var(--color-ion); outline-offset: 3px; }
+}
+
+/* Fixed light field + film grain. Render exactly once, in layout. */
+@utility atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  background:
+    radial-gradient(90vmax 75vmax at var(--atmo-ax) var(--atmo-ay), var(--atmo-a), transparent),
+    radial-gradient(80vmax 65vmax at var(--atmo-bx) var(--atmo-by), var(--atmo-b), transparent),
+    var(--color-void);
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   3. SECTION BLEED UTILITIES
+═════════════════════════════════════════════════════════════════════════════ */
+
+/* Local glow that overflows its section. Usage: <div aria-hidden className="aura aura-nebula" /> inside a `relative isolate` section. */
+@utility aura {
+  position: absolute;
+  inset: -25vh -10vw;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(closest-side, var(--aura-color, color-mix(in oklch, var(--color-nebula) 20%, transparent)), transparent);
+}
+@utility aura-* {
+  --aura-color: color-mix(in oklch, --value(--color-*) 20%, transparent);
+}
+
+/* Feathered edges for sections that contain their own media. Tune with [--feather:25%]. */
+@utility feather-y {
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--feather, 18%), #000 calc(100% - var(--feather, 18%)), transparent);
+}
+@utility feather-t {
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--feather, 18%));
+}
+@utility feather-b {
+  mask-image: linear-gradient(to top, transparent, #000 var(--feather, 18%));
+}
+
+/* Single-use horizon line (e.g. above footer). Not a section divider. */
+@utility horizon {
+  height: 1px;
+  background: linear-gradient(90deg in oklch, transparent, rgb(255 255 255 / 0.10) 30%, color-mix(in oklch, var(--color-ion) 55%, transparent) 50%, rgb(255 255 255 / 0.10) 70%, transparent);
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   4. SURFACE & TYPE UTILITIES
+═════════════════════════════════════════════════════════════════════════════ */
+
+/* Linear-style 1px gradient stroke. Element needs a border-radius; composes with glass cards. */
+@utility border-glow {
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(140deg in oklch,
+      rgb(255 255 255 / 0.16),
+      rgb(255 255 255 / 0.04) 40%,
+      rgb(255 255 255 / 0.02) 65%,
+      color-mix(in oklch, var(--color-ion) 45%, transparent));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.7;
+    transition: opacity 0.5s var(--ease-expo);
+  }
+  &:hover::before { opacity: 1; }
+}
+
+/* Headline highlight — max 1–3 words per headline. */
+@utility text-spectrum {
+  background-image: linear-gradient(100deg in oklch, var(--color-ion-soft), var(--color-nebula-soft));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Standard glass surface */
+@utility glass {
+  background: rgb(255 255 255 / 0.025);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   AUXILIARY THEME TOKENS  (retained from the prior system — fonts, radii,
+   shadows, animations, and accent tints not covered by the token block above)
+───────────────────────────────────────────────────────────────────────────── */
+
+@theme inline {
+  /* ── Residual color tokens ── */
+  --color-bg-glass:      rgba(255, 255, 255, 0.04);
+
+  --color-border:        rgba(255, 255, 255, 0.08);
+  --color-border-glow:   rgba(56, 189, 248, 0.4);
+
+  --color-neon-rose:     #f472b6;
+  --color-neon-amber:    #fbbf24;
+
+  /* Semantic glow tints (used for backgrounds / badge fills) */
+  --color-glow-cyan:     rgba(56, 189, 248, 0.12);
+  --color-glow-violet:   rgba(167, 139, 250, 0.12);
+  --color-glow-emerald:  rgba(52, 211, 153, 0.10);
+  --color-glow-rose:     rgba(244, 114, 182, 0.10);
+
+  /* ── Typography ── */
+  --font-display: var(--font-syne), system-ui, sans-serif;
+  --font-body:    var(--font-inter), system-ui, sans-serif;
+  --font-mono:    "Fira Code", "Fira Mono", ui-monospace, monospace;
+
+  /* Signature Reveal section fonts (pretendard + newsreader).
+     Named -signature so they don't override the project's --font-display (Syne). */
+  --font-signature:       var(--font-pretendard), ui-sans-serif, system-ui, sans-serif;
+  --font-signature-serif: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-signature-hand:  var(--font-caveat), "Segoe Print", cursive;
+  --font-impact:          var(--font-lexend-giga), ui-sans-serif, system-ui, sans-serif;
+
+  /* Site footer fonts (Outfit display + Inter Tight text). */
+  --font-footer-display:  var(--font-outfit), "Helvetica Neue", Arial, sans-serif;
+  --font-footer-text:     var(--font-inter-tight), "Helvetica Neue", Arial, sans-serif;
+
+  /* ── Border Radius ── */
+  --radius-xs:   4px;
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   24px;
+  --radius-chip: 9999px;
+
+  /* ── Box Shadows / Glows ── */
+  --shadow-card:          0 4px 24px rgba(0, 0, 0, 0.5);
+  --shadow-glow-cyan:     0 0 24px rgba(56, 189, 248, 0.25);
+  --shadow-glow-violet:   0 0 24px rgba(167, 139, 250, 0.25);
+  --shadow-glow-emerald:  0 0 24px rgba(52, 211, 153, 0.20);
+  --shadow-btn-primary:   0 0 20px rgba(56, 189, 248, 0.50), 0 4px 16px rgba(0, 0, 0, 0.40);
+  --shadow-btn-hover:     0 0 32px rgba(56, 189, 248, 0.70), 0 8px 24px rgba(0, 0, 0, 0.50);
+
+  /* ── Animations ── */
+  --animate-marquee:      marquee 20s linear infinite;
+  --animate-marquee-slow: marquee 35s linear infinite;
+  --animate-fade-up:      fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-fade-in:      fadeIn 0.5s ease forwards;
+  --animate-float:        float 6s ease-in-out infinite;
+  --animate-pulse-glow:   pulseGlow 3s ease-in-out infinite;
+  --animate-spin-slow:    spin 20s linear infinite;
+  --animate-blob:         blob 10s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   KEYFRAMES
+───────────────────────────────────────────────────────────────────────────── */
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-16px); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.08); }
+}
+
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(40px, -30px) scale(1.1); }
+  66%       { transform: translate(-20px, 20px) scale(0.95); }
+}
+
+/* PERF: CSS-only background orb animations — avoids JS Framer loops on decorative elements */
+@keyframes orbBreathe {
+  0%, 100% { opacity: 0.18; transform: scale(1) translateZ(0); }
+  50%       { opacity: 0.28; transform: scale(1.04) translateZ(0); }
+}
+@keyframes subtlePulse {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 0.8; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   BASE RESET & ROOT
+───────────────────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  height: 100%;
+}
+
+body {
+  background-color: #030712;
+  color: #e2e8f0;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  min-height: 100%;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: #030712; }
+::-webkit-scrollbar-thumb  { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248, 0.35); }
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-syne), system-ui, sans-serif;
+  font-weight: 700;
+  line-height: 1.15;
+  text-wrap: balance;
+  color: #e2e8f0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img, video {
+  max-width: 100%;
+  display: block;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   BACKGROUND ATMOSPHERE
+   Applied once to <body> or a fixed wrapper — never on scrolling content.
+───────────────────────────────────────────────────────────────────────────── */
+
+.bg-atmosphere {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+
+/* Hero radial — cyan bloom at the top */
+.bg-atmosphere::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -5%,  rgba(56, 189, 248, 0.10) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 40% at 85% 85%,  rgba(167, 139, 250, 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 35% at  8% 65%,  rgba(52,  211, 153, 0.05) 0%, transparent 50%);
+}
+
+/* Dot grid overlay */
+.bg-atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse 100% 100% at 50% 50%, black 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 100% 100% at 50% 50%, black 40%, transparent 100%);
+}
+
+/* Animated ambient blobs — place three <div class="blob blob-*"> inside .bg-atmosphere */
+.blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.35;
+  animation: blob 10s ease-in-out infinite;
+}
+.blob-cyan    { width: 500px; height: 500px; background: rgba(56,  189, 248, 0.20); top: -120px; left: 40%;  animation-delay: 0s;  }
+.blob-violet  { width: 400px; height: 400px; background: rgba(167, 139, 250, 0.18); bottom: 10%; right: 5%;  animation-delay: 3s;  }
+.blob-emerald { width: 300px; height: 300px; background: rgba(52,  211, 153, 0.14); bottom: 25%; left: -60px; animation-delay: 6s; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   GLASS UTILITIES  (@utility registers these as Tailwind classes)
+───────────────────────────────────────────────────────────────────────────── */
+
+@utility glass-sm {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(8px) saturate(150%);
+  -webkit-backdrop-filter: blur(8px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+@utility glass-hover {
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+.glass-hover:hover {
+  border-color: rgba(56, 189, 248, 0.40);
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.12), 0 8px 32px rgba(0, 0, 0, 0.40);
+}
+
+@utility glass-nav {
+  background: rgba(3, 7, 18, 0.80);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   NEON / GLOW UTILITIES
+───────────────────────────────────────────────────────────────────────────── */
+
+@utility neon-text-cyan {
+  color: #38bdf8;
+  text-shadow: 0 0 20px rgba(56, 189, 248, 0.60);
+}
+
+@utility neon-text-violet {
+  color: #a78bfa;
+  text-shadow: 0 0 20px rgba(167, 139, 250, 0.60);
+}
+
+@utility neon-text-emerald {
+  color: #34d399;
+  text-shadow: 0 0 20px rgba(52, 211, 153, 0.60);
+}
+
+@utility gradient-text {
+  background: linear-gradient(135deg, #38bdf8 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@utility gradient-text-warm {
+  background: linear-gradient(135deg, #a78bfa 0%, #f472b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@utility glow-cyan {
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.25);
+}
+
+@utility glow-violet {
+  box-shadow: 0 0 24px rgba(167, 139, 250, 0.25);
+}
+
+@utility glow-btn {
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.50), 0 4px 16px rgba(0, 0, 0, 0.40);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   TYPOGRAPHY UTILITIES
+───────────────────────────────────────────────────────────────────────────── */
+
+@utility font-display {
+  font-family: var(--font-syne), system-ui, sans-serif;
+}
+
+@utility eyebrow {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #38bdf8;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   LAYOUT UTILITIES
+───────────────────────────────────────────────────────────────────────────── */
+
+@utility section-padding {
+  padding-block: 6rem;
+  padding-inline: 1.25rem;
+}
+
+@utility container-base {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SECTION DIVIDER
+───────────────────────────────────────────────────────────────────────────── */
+
+@utility divider-glow {
+  height: 1px;
+  border: none;
+  background: linear-gradient(90deg, transparent 0%, #38bdf8 40%, #a78bfa 60%, transparent 100%);
+  opacity: 0.25;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MARQUEE
+───────────────────────────────────────────────────────────────────────────── */
+
+@utility marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 20s linear infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   BADGE / TAG VARIANTS
+───────────────────────────────────────────────────────────────────────────── */
+
+@utility badge-cyan {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1875rem 0.5625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.10);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.22);
+}
+
+@utility badge-violet {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1875rem 0.5625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 4px;
+  background: rgba(167, 139, 250, 0.10);
+  color: #a78bfa;
+  border: 1px solid rgba(167, 139, 250, 0.22);
+}
+
+@utility badge-emerald {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1875rem 0.5625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 4px;
+  background: rgba(52, 211, 153, 0.10);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.22);
+}
+
+@utility badge-rose {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1875rem 0.5625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 4px;
+  background: rgba(244, 114, 182, 0.10);
+  color: #f472b6;
+  border: 1px solid rgba(244, 114, 182, 0.22);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   NOISE TEXTURE  (decorative, apply to cards for depth)
+───────────────────────────────────────────────────────────────────────────── */
+
+@utility noise {
+  position: relative;
+}
+.noise::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.025;
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   REDUCED MOTION
+───────────────────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  :root { transition: none; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .blob { animation: none; }
+  .marquee-track { animation: none; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PERF: content-visibility — skip rendering off-screen sections entirely
+   until they approach the viewport. Saves paint + layout for below-fold content.
+───────────────────────────────────────────────────────────────────────────── */
+.section-lazy {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 800px;
+}
+.section-lazy-tall {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1200px;
+}
+/* ═════════════════════════════════════════════════════════════════════════════
+   5. SHADCN TOKEN BRIDGE
+   ─────────────────────────────────────────────────────────────────────────────
+   Components taken from the shadcn ecosystem are written against a fixed set of
+   semantic names (background / foreground / card / muted / ring / chart-1..5).
+   Rather than rewrite those components against the Void palette line by line,
+   which is where transcription bugs come from, the names are aliased here once
+   and the components drop in untouched.
+
+   These are additive. Nothing in the existing system reads them, and the names
+   do not collide with the tokens above. --color-border already exists further
+   up and is deliberately left alone.
+
+   Read at runtime, not only through utilities: the lanyard rail builds its
+   metal and plastic with color-mix(in oklab, var(--color-muted-foreground) ...)
+   inside inline styles, so these have to resolve on :root, not just compile
+   into class names.
+═════════════════════════════════════════════════════════════════════════════ */
+
+@theme {
+  --color-background: #030712;
+  --color-foreground: #e7eaf3;
+
+  /* Card = the badge face. One step up from the page, never pure black. */
+  --color-card: #0c1222;
+  --color-card-foreground: #e7eaf3;
+
+  /* Muted = inert fills and secondary type. */
+  --color-muted: rgb(255 255 255 / 0.06);
+  --color-muted-foreground: #8a93a6;
+
+  /* Focus ring matches the global :focus-visible outline in the base layer. */
+  --color-ring: #22d8ff;
+
+  /* Accent slots. Brand order: violet, blue, aurora, lilac, ion. */
+  --color-chart-1: #7b61ff;
+  --color-chart-2: #5b7cff;
+  --color-chart-3: #2cf5b0;
+  --color-chart-4: #b4a6ff;
+  --color-chart-5: #22d8ff;
+}
+
+/*
+  The site is dark only: html carries color-scheme dark and the page is #030712
+  at every breakpoint. Tailwind's dark variant otherwise follows the operating
+  system, so a visitor on a light desktop would get the light branch of a
+  borrowed component sitting on a near black page. Point the variant at
+  everything instead, so dark:* always wins.
+
+  Verified safe at the time of writing: no other file in components/ or app/
+  uses the dark variant.
+*/
+@custom-variant dark (&);
