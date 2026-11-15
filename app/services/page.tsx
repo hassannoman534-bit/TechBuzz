@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHero } from "@/components/sections/page-hero/page-hero";
+import { ReviewsRail } from "@/components/sections/reviews-rail/reviews-rail";
 import { ServicesShowcase } from "@/components/sections/services-showcase/services-showcase";
 import { showcaseContent } from "@/components/sections/services-showcase/services-showcase.config";
 import { SiteFooter } from "@/components/sections/site-footer/site-footer";
@@ -15,6 +16,7 @@ export default function ServicesPage() {
     <main className="bg-[#030712]">
       <PageHero content={showcaseContent.hero} />
       <ServicesShowcase className="pt-0" />
+      <ReviewsRail />
       <SiteFooter />
     </main>
   );

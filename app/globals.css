@@ -613,3 +613,56 @@ img, video {
   content-visibility: auto;
   contain-intrinsic-size: auto 1200px;
 }
+/* ═════════════════════════════════════════════════════════════════════════════
+   5. SHADCN TOKEN BRIDGE
+   ─────────────────────────────────────────────────────────────────────────────
+   Components taken from the shadcn ecosystem are written against a fixed set of
+   semantic names (background / foreground / card / muted / ring / chart-1..5).
+   Rather than rewrite those components against the Void palette line by line,
+   which is where transcription bugs come from, the names are aliased here once
+   and the components drop in untouched.
+
+   These are additive. Nothing in the existing system reads them, and the names
+   do not collide with the tokens above. --color-border already exists further
+   up and is deliberately left alone.
+
+   Read at runtime, not only through utilities: the lanyard rail builds its
+   metal and plastic with color-mix(in oklab, var(--color-muted-foreground) ...)
+   inside inline styles, so these have to resolve on :root, not just compile
+   into class names.
+═════════════════════════════════════════════════════════════════════════════ */
+
+@theme {
+  --color-background: #030712;
+  --color-foreground: #e7eaf3;
+
+  /* Card = the badge face. One step up from the page, never pure black. */
+  --color-card: #0c1222;
+  --color-card-foreground: #e7eaf3;
+
+  /* Muted = inert fills and secondary type. */
+  --color-muted: rgb(255 255 255 / 0.06);
+  --color-muted-foreground: #8a93a6;
+
+  /* Focus ring matches the global :focus-visible outline in the base layer. */
+  --color-ring: #22d8ff;
+
+  /* Accent slots. Brand order: violet, blue, aurora, lilac, ion. */
+  --color-chart-1: #7b61ff;
+  --color-chart-2: #5b7cff;
+  --color-chart-3: #2cf5b0;
+  --color-chart-4: #b4a6ff;
+  --color-chart-5: #22d8ff;
+}
+
+/*
+  The site is dark only: html carries color-scheme dark and the page is #030712
+  at every breakpoint. Tailwind's dark variant otherwise follows the operating
+  system, so a visitor on a light desktop would get the light branch of a
+  borrowed component sitting on a near black page. Point the variant at
+  everything instead, so dark:* always wins.
+
+  Verified safe at the time of writing: no other file in components/ or app/
+  uses the dark variant.
+*/
+@custom-variant dark (&);
