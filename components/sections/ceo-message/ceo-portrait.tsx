@@ -8,9 +8,12 @@ import { ceoMessage, EASE, PORTRAIT } from "./ceo-message.config";
 
 const { portrait } = ceoMessage;
 
-/** Bottom of the cutout dissolves into the page instead of ending on a hard edge. */
+/**
+ * Dissolves at both ends: he rises out of the dark rather than starting on a
+ * hard edge, and sinks back into the page at the bottom.
+ */
 const FADE_MASK =
-  "linear-gradient(to bottom, #000 0%, #000 44%, rgba(0,0,0,0.62) 68%, rgba(0,0,0,0.2) 85%, transparent 98%)";
+  "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.3) 8%, #000 24%, #000 62%, rgba(0,0,0,0.6) 82%, transparent 98%)";
 
 type CeoPortraitProps = {
   /** Gates the entrance until the opening overlay is gone. */
@@ -18,17 +21,14 @@ type CeoPortraitProps = {
 };
 
 /**
- * Phase 2 portrait. Travels in from the right and inward, then holds.
+ * Hero portrait, centred under the liquid headline.
  *
- * Placement: the box starts below the navbar, not at the top of the viewport. The
- * navbar is fixed at top-0 and its pill reaches about 100px down, and with the
- * portrait running full height his hair landed at the same 100px, so the pill cut
- * straight across his head. The top inset is the clearance.
+ * The composition is symmetric now, so the entrance rises and comes inward
+ * instead of travelling in from the right. A sideways move reads as off balance
+ * when everything else is centred on the same axis.
  *
- * The image is object-cover anchored top, so he fills the right side and the torso
- * bleeds off the bottom into the fade rather than being letterboxed with dead space
- * above his head. The silhouette mask below has to use the same cover/top framing
- * or the wash drifts off the subject.
+ * The box starts at 42% so the type above it sits on clean darkness. The navbar
+ * is fixed at top-0 and runs about 100px down, and nothing here reaches it.
  */
 export function CeoPortrait({ play }: CeoPortraitProps): React.ReactElement {
   const reduce = useReducedMotionSafe();
@@ -38,13 +38,13 @@ export function CeoPortrait({ play }: CeoPortraitProps): React.ReactElement {
     target: ref,
     offset: ["start start", "end start"],
   });
-  const driftY = useTransform(scrollYProgress, [0, 1], ["0%", "-12%"]);
+  const driftY = useTransform(scrollYProgress, [0, 1], ["0%", "-10%"]);
   const driftOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
   return (
     <motion.div
       ref={ref}
-      className="pointer-events-none absolute bottom-0 right-0 top-[40%] z-0 md:top-[clamp(5.5rem,11vh,7.5rem)] flex items-end justify-end overflow-hidden"
+      className="pointer-events-none absolute bottom-0 left-1/2 top-[56%] z-0 flex w-[min(92vw,40rem)] -translate-x-1/2 items-end justify-center overflow-hidden"
       style={
         reduce
           ? undefined
@@ -52,13 +52,13 @@ export function CeoPortrait({ play }: CeoPortraitProps): React.ReactElement {
       }
     >
       <motion.div
-        className="relative h-full w-[94vw] translate-x-[6%] md:w-[clamp(28rem,54vw,52rem)] md:translate-x-[2%]"
+        className="relative h-full w-full"
         initial={
           reduce
             ? { opacity: 0 }
             : {
                 opacity: 0,
-                transform: `translateX(${PORTRAIT.fromX}) scale(${PORTRAIT.fromScale})`,
+                transform: `translateY(${PORTRAIT.fromY}) scale(${PORTRAIT.fromScale})`,
                 filter: `blur(${PORTRAIT.fromBlurPx}px)`,
               }
         }
@@ -66,7 +66,7 @@ export function CeoPortrait({ play }: CeoPortraitProps): React.ReactElement {
           play
             ? reduce
               ? { opacity: 1 }
-              : { opacity: 1, transform: "translateX(0%) scale(1)", filter: "blur(0px)" }
+              : { opacity: 1, transform: "translateY(0%) scale(1)", filter: "blur(0px)" }
             : undefined
         }
         transition={{
@@ -84,16 +84,15 @@ export function CeoPortrait({ play }: CeoPortraitProps): React.ReactElement {
             alt={portrait.alt}
             fill
             priority
-            sizes="(max-width: 768px) 94vw, 52rem"
+            sizes="(max-width: 768px) 92vw, 40rem"
             className="select-none object-cover object-top"
-            style={{ filter: "contrast(1.06) saturate(0.82) brightness(0.92)" }}
+            style={{ filter: "contrast(1.04) saturate(0.86)" }}
           />
 
           {/*
             The wash is masked with the cutout itself, so it takes his silhouette.
-            A plain overlay layer would paint its own rectangle and leave hard seams
-            down the left edge and across the bottom. Framing must match the Image
-            above: cover, anchored top.
+            A plain overlay would paint its own rectangle and leave hard seams.
+            Framing must match the Image above: cover, anchored top.
           */}
           <span
             aria-hidden
@@ -101,7 +100,7 @@ export function CeoPortrait({ play }: CeoPortraitProps): React.ReactElement {
             style={{
               mixBlendMode: "overlay",
               background:
-                "linear-gradient(205deg, rgba(123,97,255,0.6) 0%, rgba(91,124,255,0.32) 48%, rgba(3,7,18,0) 82%)",
+                "linear-gradient(200deg, rgba(123,97,255,0.58) 0%, rgba(91,124,255,0.3) 50%, rgba(3,7,18,0) 84%)",
               maskImage: `url(${portrait.src})`,
               WebkitMaskImage: `url(${portrait.src})`,
               maskSize: "cover",
@@ -113,22 +112,6 @@ export function CeoPortrait({ play }: CeoPortraitProps): React.ReactElement {
             }}
           />
         </div>
-
-        {/*
-          Edge vignettes. object-cover fills the box, so his shoulder meets the
-          container edge as a hard vertical cut. These dissolve both sides into the
-          page. The backdrop is already #030712, so they only hide the seam.
-        */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 left-0 w-[26%]"
-          style={{ background: "linear-gradient(to right, #030712, rgba(3,7,18,0))" }}
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 w-[14%]"
-          style={{ background: "linear-gradient(to left, #030712, rgba(3,7,18,0))" }}
-        />
       </motion.div>
     </motion.div>
   );

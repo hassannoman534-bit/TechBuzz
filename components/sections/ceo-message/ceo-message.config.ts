@@ -8,10 +8,23 @@
  */
 
 export type CeoMessageContent = {
-  intro: { logoSrc: string; logoAlt: string; logoWidth: number; logoHeight: number; holdMs: number; reducedHoldMs: number };
+  intro: {
+    logoSrc: string;
+    logoAlt: string;
+    logoWidth: number;
+    logoHeight: number;
+    holdMs: number;
+    reducedHoldMs: number;
+  };
   portrait: { src: string; alt: string; width: number; height: number };
-  heading: { eyebrow: string; title: string; sub: string; cue: string };
-  signature: { name: string; role: string; company: string };
+  heading: {
+    eyebrow: string;
+    word: string;
+    srHeading: string;
+    sub: string;
+    cue: string;
+  };
+  signoff: { salutation: string; name: string; role: string; company: string };
   message: { lines: string[] };
 };
 
@@ -31,13 +44,22 @@ export const ceoMessage: CeoMessageContent = {
     height: 1245,
   },
   heading: {
-    eyebrow: "Message from CEO",
-    title: "Message from the CEO",
-    sub: "On how TechBuzz started and where it is going.",
+    eyebrow: "Est. 2019, Lahore",
+    /**
+     * The liquid headline. One short word: the type is rasterised on a single
+     * line and shrinks to fit, so anything past about ten characters goes small.
+     * Alternatives that suit the message: Origins, Conviction, Our Why.
+     */
+    word: "Belief",
+    /** Not shown. Carries the page for search engines and screen readers. */
+    srHeading: "A message from Usman Shabbir, Chief Executive Officer of TechBuzz",
+    sub: "The one idea this company was built around.",
     cue: "Scroll",
   },
-  signature: {
-    name: "Usman Shabbir",
+  signoff: {
+    salutation: "Best regards",
+    /** Rendered as liquid type, so it stays on one line. */
+    name: "Muhammad Usman",
     role: "Chief Executive Officer",
     company: "TechBuzz",
   },
@@ -68,27 +90,48 @@ export const STAGE = {
   travelMaxPx: 620,
   travelVhRatio: 0.62,
   /**
-   * Extra distance past the block's own height, so the last line finishes its pass
-   * and the stage is empty before it unpins. Without this the block stops centred
-   * and the section drags the unfinished text upward.
+   * Extra distance past the block's own height, so the last line finishes its
+   * pass and the stage is empty before it unpins.
    */
   exitPadVhRatio: 0.25,
   /**
    * Where the readable stretch ends. Up to here the block travels slowly through
-   * the camera; after it, it leaves fast. A straight map spends most of the scroll
-   * on text that has already receded to nothing.
+   * the camera; after it, it leaves fast.
    */
   readableUntil: 0.75,
   /** Fade the stage over the final stretch so nothing is visible when it unpins. */
   fadeStart: 0.85,
 } as const;
 
-/** Phase 2 portrait motion. */
+/** Hero portrait motion. Rises and comes inward, because the hero is centred. */
 export const PORTRAIT = {
-  /** Enters from the right, travelling left and inward. */
-  fromX: "22%",
-  fromScale: 1.08,
+  fromY: "9%",
+  fromScale: 1.07,
   fromBlurPx: 14,
   durationS: 1.5,
-  delayS: 0.1,
+  delayS: 0.25,
+} as const;
+
+/**
+ * Shared settings for both liquid headlines.
+ *
+ * Montserrat 800 rather than Outfit: Outfit is only loaded at 500 and 600, and
+ * heavy strokes are what give the surface enough body to read as liquid. The
+ * team page already uses Montserrat for its giant words.
+ */
+export const LIQUID = {
+  fontVar: "--font-montserrat",
+  fontWeight: 800,
+  ink: "#eef0f7",
+  highlight: "#ffffff",
+  /** Tint where ink has been pulled off a letter. Brand violet. */
+  accent: "#7b61ff",
+  viscosity: 0.58,
+  trailLength: 8,
+  /**
+   * Below this width the surfaces are frozen: one representative frame, no
+   * render loop. Raise it to 9999 to freeze everywhere if the live shader costs
+   * too much on a real machine. The page keeps its look either way.
+   */
+  liveAbovePx: 640,
 } as const;
