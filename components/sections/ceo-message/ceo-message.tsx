@@ -18,10 +18,16 @@ const { heading } = ceoMessage;
  * Message From CEO.
  *
  * 1. LogoIntro holds the screen, then unmounts through AnimatePresence.
- * 2. The hero: everything sits on one centre axis. The headline is a liquid
- *    surface you can drag ink out of, the portrait rises underneath it.
+ * 2. The hero is a split: the line of copy and the liquid word sit hard left in
+ *    one column, the portrait travels in from the right in the other.
  * 3. PerspectiveMessage carries the message through the camera on scroll.
  * 4. CeoSignoff closes with the second liquid surface.
+ *
+ * Why two columns rather than one centre axis: the centred draft stacked the
+ * word and the portrait on the same vertical line, so the only thing keeping
+ * his face out of the letters was a height calculation, and it broke on any
+ * window the calculation had not been tuned for. Separate columns cannot
+ * collide at any width. Below lg they stack, copy first.
  *
  * The hero reserves the top of the viewport for the navbar, which is fixed at
  * top-0 and runs about 100px down.
@@ -36,11 +42,13 @@ export function CeoMessage(): React.ReactElement {
   const handleIntroDone = useCallback(() => setIntroDone(true), []);
   const family = useResolvedFont(LIQUID.fontVar);
   const narrow = useNarrowScreen(LIQUID.liveAbovePx);
+  /** Below lg the two columns stack, and the portrait takes the leftover height. */
+  const stacked = useNarrowScreen(1023);
   const [headlineSize, setHeadlineSize] = useState<number>(LIQUID.headlineMaxPx);
 
-  // The headline is sized off the window height, not just the container width.
-  // Width alone lets a wide, short window render a word tall enough to swallow
-  // the portrait underneath it.
+  // The word also shrinks to fit its column, so this is only the ceiling. It is
+  // read off the window height so a short window never gets a word taller than
+  // the space above the fold.
   useEffect(() => {
     const update = (): void => {
       const h = window.innerHeight * LIQUID.headlineVhRatio;
@@ -55,12 +63,14 @@ export function CeoMessage(): React.ReactElement {
     target: heroRef,
     offset: ["start start", "end start"],
   });
-  const copyY = useTransform(scrollYProgress, [0, 1], ["0%", "-26%"]);
-  const copyOpacity = useTransform(scrollYProgress, [0, 0.62], [1, 0]);
+  const copyY = useTransform(scrollYProgress, [0, 1], ["0%", "-14%"]);
+  // Gone well before it can reach the navbar pill. The earlier draft held the
+  // copy at part opacity long enough for the line to sit across the pill.
+  const copyOpacity = useTransform(scrollYProgress, [0, 0.35], [1, 0]);
 
   const fade = (delay: number) => ({
-    initial: { opacity: 0, y: 12 },
-    animate: introDone ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 },
+    initial: { opacity: 0, y: 14 },
+    animate: introDone ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 },
     transition: reduce ? { duration: 0.01 } : { duration: 0.85, ease: EASE, delay },
   });
 
@@ -72,91 +82,108 @@ export function CeoMessage(): React.ReactElement {
 
       <section
         ref={heroRef}
-        className="relative isolate flex min-h-[100svh] flex-col items-center overflow-hidden bg-[#030712] pt-[clamp(5.5rem,11vh,7.5rem)]"
+        className="relative isolate flex min-h-[100svh] flex-col overflow-hidden bg-[#030712] pt-[clamp(5.5rem,11vh,7.5rem)]"
       >
-        <motion.div
-          className="relative z-10 mx-auto flex w-full max-w-[58rem] flex-col items-center px-[clamp(1.25rem,5vw,4rem)] pt-[clamp(1.5rem,5vh,3.5rem)] text-center"
-          style={reduce ? undefined : { y: copyY, opacity: copyOpacity }}
-        >
-          <h1 className="sr-only">{heading.srHeading}</h1>
-
-          <motion.span className="flex items-center justify-center gap-4" {...fade(0)}>
-            <span
-              aria-hidden
-              className="block h-px w-[clamp(1.25rem,3.5vw,2.75rem)] shrink-0"
-              style={{
-                background: "linear-gradient(90deg, rgba(201,194,255,0.05), rgba(201,194,255,0.5))",
-              }}
-            />
-            <span className="font-footer-text text-[0.66rem] uppercase tracking-[0.32em] whitespace-nowrap text-white/45">
-              {heading.eyebrow}
-            </span>
-            <span
-              aria-hidden
-              className="block h-px w-[clamp(1.25rem,3.5vw,2.75rem)] shrink-0"
-              style={{
-                background: "linear-gradient(90deg, rgba(201,194,255,0.5), rgba(201,194,255,0.05))",
-              }}
-            />
-          </motion.span>
-
-          <motion.p
-            className="font-footer-text mt-[clamp(0.6rem,1.8vh,1rem)] max-w-sm text-[clamp(0.9rem,1.25vw,1.02rem)] leading-relaxed text-white/50"
-            {...fade(0.2)}
+        <div className="relative mx-auto flex w-full max-w-[102rem] min-h-0 flex-1 flex-col gap-[clamp(1rem,3vh,2.5rem)] px-[clamp(1.25rem,5vw,5rem)] pb-[clamp(1rem,3vh,2.5rem)] lg:flex-row lg:items-center lg:gap-[clamp(1.5rem,3vw,3.5rem)]">
+          {/* Left column: the copy owns its own width, so nothing centres it. */}
+          <motion.div
+            className="relative z-10 w-full shrink-0 text-left lg:w-[54%]"
+            style={reduce ? undefined : { y: copyY, opacity: copyOpacity }}
           >
-            {heading.sub}
-          </motion.p>
+            <h1 className="sr-only">{heading.srHeading}</h1>
+
+            <motion.p
+              className="font-footer-text max-w-[46ch] text-[clamp(0.92rem,1.2vw,1.06rem)] leading-relaxed text-white/55"
+              {...fade(0)}
+            >
+              {heading.sub}
+            </motion.p>
+
+            {/*
+              Height is reserved here. LiquidText sizes itself from the rasterised
+              word, which only exists after mount, so without a reservation the rest
+              of the hero jumps down when it lands.
+
+              The reservation tracks the column width, not the height ceiling.
+              The ceiling is what the word is allowed to reach on a tall window;
+              the word actually renders at whatever fits the column, which on a
+              phone is a third of that, and reserving the ceiling there left a
+              screen of dead space under the headline.
+            */}
+            <motion.div
+              className="mt-[clamp(0.4rem,1.4vh,1rem)] w-full"
+              style={{ minHeight: "clamp(4.5rem, 21vw, 15rem)" }}
+              {...fade(0.12)}
+            >
+              {family ? (
+                <LiquidText
+                  text={heading.word}
+                  ariaLabel={heading.srHeading}
+                  tone="dark"
+                  align="left"
+                  fontFamily={family}
+                  fontWeight={LIQUID.fontWeight}
+                  fontSize={headlineSize}
+                  color={LIQUID.ink}
+                  highlight={LIQUID.highlight}
+                  accentColor={LIQUID.accent}
+                  viscosity={LIQUID.viscosity}
+                  trailLength={LIQUID.trailLength}
+                  frozen={narrow}
+                />
+              ) : (
+                <span
+                  className="font-footer-display block whitespace-nowrap text-[#eef0f7]"
+                  style={{
+                    // Shown only until the font resolves, which happens behind
+                    // the opening overlay. Clamped by viewport width so it
+                    // cannot run wider than its column in that moment.
+                    fontSize: `clamp(2rem, 13vw, ${Math.round(headlineSize * 0.62)}px)`,
+                    fontWeight: 600,
+                    letterSpacing: "-0.04em",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {heading.word}
+                </span>
+              )}
+            </motion.div>
+
+            <motion.span
+              aria-hidden
+              className="mt-[clamp(0.25rem,1.2vh,0.9rem)] block h-px w-[clamp(4rem,12vw,9rem)] origin-left"
+              style={{
+                background: "linear-gradient(90deg, rgba(201,194,255,0.55), rgba(201,194,255,0))",
+              }}
+              initial={{ scaleX: 0 }}
+              animate={introDone ? { scaleX: 1 } : { scaleX: 0 }}
+              transition={reduce ? { duration: 0.01 } : { duration: 1.1, ease: EASE, delay: 0.4 }}
+            />
+          </motion.div>
 
           {/*
-            Height is reserved here. LiquidText sizes itself from the rasterised
-            word, which only exists after mount, so without a reservation the rest
-            of the hero jumps down when it lands.
+            Right column. On lg it is a sized box of its own; below lg it takes
+            whatever height is left under the copy. Either way it is a sibling of
+            the type, never an overlay on top of it.
           */}
-          <motion.div
-            className="mt-[clamp(0.75rem,2.5vh,1.5rem)] w-full"
-            style={{ minHeight: headlineSize * 1.6 }}
-            {...fade(0.14)}
+          {/*
+            Inline height, not a Tailwind arbitrary value: this one decides
+            whether he fits above the fold, and arbitrary values have been
+            dropped from this project's build before.
+
+            Stacked, the height is left to flex-1. It must not be set to 100%
+            on an inner wrapper: a flex item sized by flex-grow has a computed
+            height of auto, so a percentage child resolves against nothing and
+            collapses to zero. That is exactly what happened, and the portrait
+            disappeared on phones while every desktop width looked right.
+          */}
+          <div
+            className="relative w-full min-h-0 flex-1 lg:flex-none lg:w-[46%]"
+            style={stacked ? undefined : { height: "min(82svh, 48rem)" }}
           >
-            {family ? (
-              <LiquidText
-                text={heading.word}
-                ariaLabel={heading.srHeading}
-                tone="dark"
-                fontFamily={family}
-                fontWeight={LIQUID.fontWeight}
-                fontSize={headlineSize}
-                color={LIQUID.ink}
-                highlight={LIQUID.highlight}
-                accentColor={LIQUID.accent}
-                viscosity={LIQUID.viscosity}
-                trailLength={LIQUID.trailLength}
-                frozen={narrow}
-              />
-            ) : (
-              <span
-                className="font-footer-display block whitespace-nowrap text-[#eef0f7]"
-                style={{
-                  fontSize: headlineSize * 0.74,
-                  fontWeight: 600,
-                  letterSpacing: "-0.04em",
-                  lineHeight: 1.6,
-                }}
-              >
-                {heading.word}
-              </span>
-            )}
-          </motion.div>
-        </motion.div>
-
-        {/*
-          The portrait takes whatever height is left under the type. Giving it a
-          fixed start percentage instead is what put his face inside the letters
-          on a short window.
-        */}
-        <div className="relative w-full min-h-0 flex-1">
-          <CeoPortrait play={introDone} />
+            <CeoPortrait play={introDone} />
+          </div>
         </div>
-
       </section>
 
       <PerspectiveMessage />

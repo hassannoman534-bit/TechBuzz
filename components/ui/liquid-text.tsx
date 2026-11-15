@@ -46,6 +46,13 @@ export interface LiquidTextProps {
   fontSize?: number;
   fontWeight?: number;
   fontFamily?: string;
+  /**
+   * Where the word sits inside its box. "center" is the original behaviour.
+   * "left" puts the ink against the left edge so the word lines up with
+   * left-aligned copy above or below it, instead of floating in the middle of
+   * a box that is wider than the word.
+   */
+  align?: "center" | "left";
   /** A slow drifting blob keeps the surface alive when nobody is pointing at it. Default true. */
   autoplay?: boolean;
   /** Render one representative frame (a bead mid-pull) and stop. Used for previews. */
@@ -143,6 +150,12 @@ interface Layout {
   textWidth: number;
   inkTop: number;
   inkBottom: number;
+  /**
+   * Horizontal centre of the word inside the canvas. Every place that needs to
+   * know where the type actually is reads this, never width / 2, so left
+   * aligned and centred layouts share one code path.
+   */
+  centerX: number;
 }
 
 function computeLayout(
@@ -151,6 +164,7 @@ function computeLayout(
   family: string,
   weight: number,
   maxFont: number,
+  align: "center" | "left" = "center",
 ): Layout | null {
   const ctx = getScratch();
   if (!ctx || width < 8) return null;
@@ -170,6 +184,10 @@ function computeLayout(
   const desc = m.actualBoundingBoxDescent || 0;
   const height = Math.round(fontSize * 1.6);
   const baseline = height * 0.53 + (asc - desc) / 2;
+  // Left aligned keeps a hair of room so the leading stroke is not clipped by
+  // the canvas edge and a bead pulled off it still has somewhere to go.
+  const leftPad = fontSize * 0.03;
+  const centerX = align === "left" ? leftPad + m.width / 2 : width / 2;
   return {
     width,
     height,
@@ -180,6 +198,7 @@ function computeLayout(
     textWidth: m.width,
     inkTop: baseline - asc,
     inkBottom: baseline + desc,
+    centerX,
   };
 }
 
@@ -258,7 +277,7 @@ function buildField(layout: Layout, text: string): Field | null {
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "#fff";
-  ctx.fillText(text, layout.width / 2, layout.baseline);
+  ctx.fillText(text, layout.centerX, layout.baseline);
   const img = ctx.getImageData(0, 0, w, h).data;
 
   const n = w * h;
@@ -526,7 +545,7 @@ interface SimParams {
 }
 
 function idlePoint(layout: Layout, t: number): [number, number] {
-  const cx = layout.width / 2;
+  const cx = layout.centerX;
   const capH = layout.inkBottom - layout.inkTop;
   const ax = layout.textWidth * 0.44;
   // Rides the top line of the word, dipping into the letters and lifting beads off them.
@@ -696,6 +715,7 @@ export function LiquidText({
   fontSize = 240,
   fontWeight = 700,
   fontFamily,
+  align = "center",
   autoplay = true,
   frozen = false,
   ariaLabel,
@@ -925,7 +945,7 @@ export function LiquidText({
     const fontSpec = `${fontWeight} 100px ${family}`;
     const run = () => {
       if (cancelled) return;
-      const lay = computeLayout(width, text, family, fontWeight, fontSize);
+      const lay = computeLayout(width, text, family, fontWeight, fontSize, align);
       if (!lay) return;
       const field = buildField(lay, text);
       if (!field) return;
@@ -935,7 +955,8 @@ export function LiquidText({
         prev &&
         prev.width === lay.width &&
         prev.height === lay.height &&
-        prev.fontSize === lay.fontSize
+        prev.fontSize === lay.fontSize &&
+        prev.centerX === lay.centerX
           ? prev
           : lay,
       );
@@ -967,7 +988,7 @@ export function LiquidText({
       const sim = simRef.current;
       const [hx, hy] = nearestInside(
         field,
-        lay.width / 2,
+        lay.centerX,
         (lay.inkTop + lay.inkBottom) / 2,
         lay.fontSize * 0.03,
       );
@@ -996,6 +1017,7 @@ export function LiquidText({
     fontWeight,
     fontFamily,
     fontSize,
+    align,
     fontsReady,
     frozen,
     reducedMotion,
@@ -1120,7 +1142,10 @@ export function LiquidText({
       {showFallback ? (
         <span
           aria-hidden="true"
-          className="absolute inset-0 flex items-center justify-center whitespace-nowrap leading-none"
+          className={cn(
+            "absolute inset-0 flex items-center whitespace-nowrap leading-none",
+            align === "left" ? "justify-start" : "justify-center",
+          )}
           style={{
             color: color ?? palette.text,
             fontSize: layout ? layout.fontSize : "clamp(48px, 14vw, 160px)",
@@ -1147,7 +1172,7 @@ function primeFrozen(
   field: Field,
   L: { viscosity: number; trail: number; blobRadius?: number },
 ) {
-  const cx = lay.width / 2;
+  const cx = lay.centerX;
   const capH = lay.inkBottom - lay.inkTop;
   const R = L.blobRadius ?? lay.fontSize * 0.13;
   // Start at the top of the last letter and pull a bead up and away from it.

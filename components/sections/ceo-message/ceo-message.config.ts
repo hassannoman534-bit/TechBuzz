@@ -1,10 +1,10 @@
 /**
  * Message From CEO: content and motion constants.
  *
- * Copy rules: short lines, no dashes. Two limits when the placeholder message is
- * replaced with Usman's real words:
- *   - about 36 characters a line, or it wraps and the tilt doubles the wrapped line
- *   - six to eight lines. Every line has to finish its pass before the stage unpins.
+ * Copy rules: short lines, no dashes. Two limits on the message block:
+ *   - about 38 characters a line. Past that it wraps on a phone, and a wrapped
+ *     line reads as two lines of different depth once the plane is tilted.
+ *   - an empty string is a stanza break, not a line. It renders as space.
  */
 
 export type CeoMessageContent = {
@@ -18,7 +18,6 @@ export type CeoMessageContent = {
   };
   portrait: { src: string; alt: string; width: number; height: number };
   heading: {
-    eyebrow: string;
     word: string;
     srHeading: string;
     sub: string;
@@ -44,7 +43,6 @@ export const ceoMessage: CeoMessageContent = {
     height: 1000,
   },
   heading: {
-    eyebrow: "Est. 2019, Lahore",
     /**
      * The liquid headline. One short word: the type is rasterised on a single
      * line and shrinks to fit, so anything past about ten characters goes small.
@@ -65,12 +63,21 @@ export const ceoMessage: CeoMessageContent = {
   },
   message: {
     lines: [
-      "We started in 2019 with one belief.",
+      "We began in 2019 with one belief.",
       "Marketing is not noise.",
       "It is clarity, repeated.",
+      "",
       "Restaurants taught us the details.",
-      "Now we build brands and software.",
-      "The standard has not moved.",
+      "A full room is won in small things.",
+      "The photograph. The wording. The hour.",
+      "",
+      "That lesson shaped everything after.",
+      "We build brands, websites and software",
+      "for owners who refuse to look average.",
+      "",
+      "The work has grown.",
+      "The standard has not.",
+      "Thank you for trusting us with it.",
     ],
   },
 };
@@ -80,36 +87,62 @@ export const EASE = [0.22, 1, 0.36, 1] as const;
 
 /** Phase 3 stage geometry. Inline styles only, never Tailwind arbitrary values. */
 export const STAGE = {
-  heightVh: 300,
-  perspectivePx: 200,
-  /** Phones get a longer lens. At 200px the near plane clips lines mid word. */
-  perspectivePxMobile: 460,
+  heightVh: 260,
+  /**
+   * Lens length. The first draft used 200px and it is why the block read as
+   * amateur: Chrome cannot map glyphs through a perspective matrix exactly, so
+   * it approximates the warp in chunks, and at a short lens the chunks
+   * disagree enough that half of each line comes out looking italic while the
+   * rest stays upright. It is visible at 700 and gone by 1800. The plane still
+   * fans with depth at this length, the type just stays type.
+   */
+  perspectivePx: 1800,
+  /** Phones get a longer lens again. A short viewport puts lines nearer. */
+  perspectivePxMobile: 2400,
   mobileMaxWidth: 640,
+  /** Plane tilt. Shallower than the first draft for the same reason. */
+  tiltDeg: 16,
   /** Where the block starts, below and near the camera. */
-  travelMinPx: 360,
-  travelMaxPx: 620,
-  travelVhRatio: 0.62,
+  travelMinPx: 300,
+  travelMaxPx: 520,
+  travelVhRatio: 0.45,
   /**
    * Extra distance past the block's own height, so the last line finishes its
    * pass and the stage is empty before it unpins.
    */
-  exitPadVhRatio: 0.25,
+  exitPadVhRatio: 0.14,
   /**
    * Where the readable stretch ends. Up to here the block travels slowly through
    * the camera; after it, it leaves fast.
    */
-  readableUntil: 0.75,
-  /** Fade the stage over the final stretch so nothing is visible when it unpins. */
-  fadeStart: 0.85,
+  readableUntil: 0.72,
+  /**
+   * Fade the stage over the final stretch. Every percent left between this and
+   * 1 is a blank screen the reader has to scroll past before the sign off
+   * arrives, and the section is 300vh, so 0.85 cost about 250px of nothing.
+   */
+  fadeStart: 0.97,
+  /** Measure for the message column, in rem. Keeps the lines from running long. */
+  measureRem: 52,
 } as const;
 
-/** Hero portrait motion. Rises and comes inward, because the hero is centred. */
+/**
+ * Hero portrait motion. He travels in from the right now, because the hero is
+ * a split: type on the left, portrait on the right. The two live in separate
+ * grid columns, so neither can grow into the other at any window size.
+ */
 export const PORTRAIT = {
-  fromY: "9%",
-  fromScale: 1.07,
-  fromBlurPx: 14,
-  durationS: 1.5,
-  delayS: 0.25,
+  fromX: "18%",
+  fromY: "3%",
+  fromScale: 1.05,
+  fromBlurPx: 16,
+  durationS: 1.6,
+  delayS: 0.2,
+  /** Hover: the violet wash sweeps down his silhouette and he lifts slightly. */
+  hoverScale: 1.028,
+  hoverDurationS: 0.85,
+  /** How far the wash travels inside the silhouette, as a share of its height. */
+  hoverSweep: 42,
 } as const;
 
 /**
@@ -128,10 +161,15 @@ export const LIQUID = {
   accent: "#7b61ff",
   viscosity: 0.58,
   trailLength: 8,
-  /** Headline size tracks window height so it never crowds the portrait. */
-  headlineVhRatio: 0.21,
-  headlineMinPx: 96,
-  headlineMaxPx: 236,
+  /**
+   * Headline size still tracks window height, so a short window never gets a
+   * word taller than the space above the fold. The ratio and the ceiling are
+   * both up from the centred draft: the word now owns its own column instead
+   * of sharing the middle of the page with the portrait.
+   */
+  headlineVhRatio: 0.26,
+  headlineMinPx: 88,
+  headlineMaxPx: 264,
   /**
    * Below this width the surfaces are frozen: one representative frame, no
    * render loop. Raise it to 9999 to freeze everywhere if the live shader costs
