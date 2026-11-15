@@ -734,6 +734,24 @@ export function LiquidText({
   const { width } = useElementSize(wrapRef);
   const [fontsReady, setFontsReady] = useState(false);
   const [epoch, setEpoch] = useState(0);
+  /*
+    The surface is dead: the GL context was lost and has not come back.
+
+    A lost context is not rare in the wild. A driver hiccup, the GPU process
+    restarting, waking a laptop, or simply having more live contexts on the
+    page than the browser will keep (this page already runs three, counting the
+    navbar) will all take one away. The context loss event is handled below,
+    but the matching restore event is only ever sent at the browser's
+    discretion, and measured here it never arrived at all: six seconds after a
+    forced loss the canvas was still dead. The page was left with a blank slot
+    where the word should be, or, depending on the browser build, the broken
+    image placeholder a canvas falls back to.
+
+    So recovery is driven from here rather than waited for, and if it cannot be
+    had the component shows the word as ordinary text instead of nothing.
+  */
+  const [dead, setDead] = useState(false);
+  const revivals = useRef(0);
   const [layout, setLayout] = useState<Layout | null>(null);
 
   const glRef = useRef<GLState | null>(null);
@@ -913,8 +931,11 @@ export function LiquidText({
     glRef.current = { gl, prog, buf, tex, u };
 
     const onLost = (e: Event) => {
+      // preventDefault is what makes a restore possible at all; without it the
+      // context is gone for good.
       e.preventDefault();
       glRef.current = null;
+      setDead(true);
     };
     const onRestored = () => setEpoch((v) => v + 1);
     canvas.addEventListener("webglcontextlost", onLost);
@@ -933,6 +954,29 @@ export function LiquidText({
       }
     };
   }, [supported, epoch]);
+
+  /*
+    Try to bring the surface back.
+
+    Calling getContext again on the same canvas returns the same dead context,
+    so the canvas element itself has to be replaced. Bumping `epoch` does that,
+    because the canvas is keyed on it, and the setup effect below then runs
+    against a brand new element that can be given a fresh context.
+
+    Two attempts. If the context dies three times the machine is telling us
+    something, and quietly settling on the text version is better than a canvas
+    that flickers in and out.
+  */
+  useEffect(() => {
+    if (!dead) return;
+    if (revivals.current >= 2) return;
+    const t = window.setTimeout(() => {
+      revivals.current += 1;
+      setDead(false);
+      setEpoch((v) => v + 1);
+    }, 350);
+    return () => window.clearTimeout(t);
+  }, [dead]);
 
   // Layout, canvas size and the distance field. Re-runs on resize, text or font change.
   useEffect(() => {
@@ -1117,7 +1161,8 @@ export function LiquidText({
   useVisibleLoop(wrapRef, frame, { enabled: supported && !still });
 
   const label = ariaLabel ?? text;
-  const showFallback = !supported;
+  // Dead surface reads as unsupported: show the word, never an empty box.
+  const showFallback = !supported || dead;
   const style: CSSProperties = {
     height: layout ? layout.height : undefined,
     minHeight: layout ? undefined : "1.6em",
@@ -1156,6 +1201,7 @@ export function LiquidText({
         </span>
       ) : (
         <canvas
+          key={epoch}
           ref={canvasRef}
           aria-hidden="true"
           className="absolute left-0 top-0 block"

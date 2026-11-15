@@ -67,7 +67,17 @@ export function CeoSignoff(): React.ReactElement {
           style={{ minHeight: "clamp(5rem,15vw,12rem)" }}
           {...rise(0.16)}
         >
-          {family ? (
+          {/*
+            The canvas is not mounted until the sign off has been reached.
+
+            A WebGL context is claimed the moment one exists, and a browser
+            only keeps so many before it starts taking the oldest away. This
+            page ran three at once from first paint, counting the navbar, for a
+            surface sitting a full page below the fold. Waiting until it is in
+            view keeps that down to two and makes a context loss less likely
+            for the headline, which is the one people actually see.
+          */}
+          {family && inView ? (
             <LiquidText
               text={signoff.name}
               ariaLabel={`${signoff.name}, ${signoff.role}`}
