@@ -38,10 +38,10 @@ export const ceoMessage: CeoMessageContent = {
     reducedHoldMs: 900,
   },
   portrait: {
-    src: "/assets/ceo/usman-shabbir.webp",
+    src: "/assets/ceo/usman-shabbir-v2.webp",
     alt: "Usman Shabbir, Chief Executive Officer of TechBuzz",
     width: 1200,
-    height: 1245,
+    height: 1000,
   },
   heading: {
     eyebrow: "Est. 2019, Lahore",
@@ -128,6 +128,10 @@ export const LIQUID = {
   accent: "#7b61ff",
   viscosity: 0.58,
   trailLength: 8,
+  /** Headline size tracks window height so it never crowds the portrait. */
+  headlineVhRatio: 0.21,
+  headlineMinPx: 96,
+  headlineMaxPx: 236,
   /**
    * Below this width the surfaces are frozen: one representative frame, no
    * render loop. Raise it to 9999 to freeze everywhere if the live shader costs

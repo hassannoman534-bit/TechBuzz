@@ -44,7 +44,7 @@ export function CeoPortrait({ play }: CeoPortraitProps): React.ReactElement {
   return (
     <motion.div
       ref={ref}
-      className="pointer-events-none absolute bottom-0 left-1/2 top-[56%] z-0 flex w-[min(92vw,40rem)] -translate-x-1/2 items-end justify-center overflow-hidden"
+      className="pointer-events-none absolute inset-0 z-0 mx-auto flex w-[min(92vw,40rem)] items-end justify-center overflow-hidden"
       style={
         reduce
           ? undefined

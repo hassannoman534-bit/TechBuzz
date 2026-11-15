@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
 import { LiquidText } from "@/components/ui/liquid-text";
 import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
@@ -36,6 +36,20 @@ export function CeoMessage(): React.ReactElement {
   const handleIntroDone = useCallback(() => setIntroDone(true), []);
   const family = useResolvedFont(LIQUID.fontVar);
   const narrow = useNarrowScreen(LIQUID.liveAbovePx);
+  const [headlineSize, setHeadlineSize] = useState<number>(LIQUID.headlineMaxPx);
+
+  // The headline is sized off the window height, not just the container width.
+  // Width alone lets a wide, short window render a word tall enough to swallow
+  // the portrait underneath it.
+  useEffect(() => {
+    const update = (): void => {
+      const h = window.innerHeight * LIQUID.headlineVhRatio;
+      setHeadlineSize(Math.round(Math.min(LIQUID.headlineMaxPx, Math.max(LIQUID.headlineMinPx, h))));
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -60,8 +74,6 @@ export function CeoMessage(): React.ReactElement {
         ref={heroRef}
         className="relative isolate flex min-h-[100svh] flex-col items-center overflow-hidden bg-[#030712] pt-[clamp(5.5rem,11vh,7.5rem)]"
       >
-        <CeoPortrait play={introDone} />
-
         <motion.div
           className="relative z-10 mx-auto flex w-full max-w-[58rem] flex-col items-center px-[clamp(1.25rem,5vw,4rem)] pt-[clamp(1.5rem,5vh,3.5rem)] text-center"
           style={reduce ? undefined : { y: copyY, opacity: copyOpacity }}
@@ -102,7 +114,7 @@ export function CeoMessage(): React.ReactElement {
           */}
           <motion.div
             className="mt-[clamp(0.75rem,2.5vh,1.5rem)] w-full"
-            style={{ minHeight: "clamp(6rem,21vw,17rem)" }}
+            style={{ minHeight: headlineSize * 1.6 }}
             {...fade(0.14)}
           >
             {family ? (
@@ -112,7 +124,7 @@ export function CeoMessage(): React.ReactElement {
                 tone="dark"
                 fontFamily={family}
                 fontWeight={LIQUID.fontWeight}
-                fontSize={236}
+                fontSize={headlineSize}
                 color={LIQUID.ink}
                 highlight={LIQUID.highlight}
                 accentColor={LIQUID.accent}
@@ -124,7 +136,7 @@ export function CeoMessage(): React.ReactElement {
               <span
                 className="font-footer-display block whitespace-nowrap text-[#eef0f7]"
                 style={{
-                  fontSize: "clamp(3rem,13vw,11rem)",
+                  fontSize: headlineSize * 0.74,
                   fontWeight: 600,
                   letterSpacing: "-0.04em",
                   lineHeight: 1.6,
@@ -134,8 +146,16 @@ export function CeoMessage(): React.ReactElement {
               </span>
             )}
           </motion.div>
-
         </motion.div>
+
+        {/*
+          The portrait takes whatever height is left under the type. Giving it a
+          fixed start percentage instead is what put his face inside the letters
+          on a short window.
+        */}
+        <div className="relative w-full min-h-0 flex-1">
+          <CeoPortrait play={introDone} />
+        </div>
 
       </section>
 
