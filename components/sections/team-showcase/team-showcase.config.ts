@@ -21,9 +21,18 @@ export type TeamMember = {
   name: string;
   /** The giant word behind the photo on the first click (one word reads best) */
   display: string;
-  /** Full designation, shown on the card */
+  /**
+   * The real job title. Shown on the card at the bottom when a member is
+   * opened, and the one a screen reader announces.
+   */
   role: string;
-  /** Short designation for the giant text on the second click (max ~16 letters) */
+  /**
+   * The nickname, for the giant knockout text on the second click and for the
+   * small label on the rail tile. Deliberately not the job title: `role`
+   * carries that on the card. It wraps, so two and three word nicknames are
+   * fine, and "Chief Content Wizard" sets over two lines and fills the frame.
+   * Leadership has no nickname, so theirs is a short form of the title.
+   */
   short: string;
   /** One word group, shown as a tag on the card */
   team: string;
@@ -49,20 +58,23 @@ export const teamContent: TeamShowcaseContent = {
     { slug: "usman-shabbir", name: "Usman Shabbir", display: "Usman", role: "Founder & CEO", short: "CEO", team: "Leadership" },
     { slug: "danial-sajid", name: "Danial Sajid", display: "Danial", role: "Managing Director", short: "Managing Director", team: "Leadership" },
     { slug: "muhammad-mehran", name: "Muhammad Mehran", display: "Mehran", role: "Chief Technology Officer", short: "CTO", team: "Leadership" },
+    { slug: "hassan-noman", name: "Hassan Noman", display: "Hassan", role: "AI Developer", short: "AI & Web Maverick", team: "Development" },
 
-    // TODO Malik: roles below are placeholders. Replace role, short and team
-    // with the real designations. Ghazanfar's is confirmed, the rest are not.
+    // TODO Malik: Ahmed Zubair was in neither the nickname list nor the
+    // designation list. Placeholder until you send his titles, or remove the
+    // entry if he has left.
     { slug: "ahmed-zubair", name: "Ahmed Zubair", display: "Ahmed", role: "Team Member", short: "Team Member", team: "Team" },
-    { slug: "usman-imtiaz", name: "Usman Imtiaz", display: "Imtiaz", role: "Team Member", short: "Team Member", team: "Team" },
-    { slug: "saad-u-ghani", name: "Saad u Ghani", display: "Saad", role: "Team Member", short: "Team Member", team: "Team" },
-    { slug: "ghazanfar", name: "Muhammad Ghazanfar", display: "Ghazanfar", role: "WordPress Developer", short: "WP Developer", team: "Development" },
-    { slug: "shiza-ahmed", name: "Shiza Ahmed", display: "Shiza", role: "Team Member", short: "Team Member", team: "Team" },
-    { slug: "bilal-haider", name: "Bilal Haider", display: "Bilal", role: "Team Member", short: "Team Member", team: "Team" },
-    { slug: "awais-shahid", name: "Awais Shahid", display: "Awais", role: "Team Member", short: "Team Member", team: "Team" },
-    { slug: "bazal-waheed", name: "Bazal Waheed", display: "Bazal", role: "Team Member", short: "Team Member", team: "Team" },
-    { slug: "hadi-abbas", name: "M. Hadi Abbas", display: "Hadi", role: "Team Member", short: "Team Member", team: "Team" },
-    { slug: "yousaf-adeel", name: "Yousaf Adeel", display: "Yousaf", role: "Team Member", short: "Team Member", team: "Team" },
-    { slug: "asad-ahmed", name: "Asad Ahmed", display: "Asad", role: "Team Member", short: "Team Member", team: "Team" },
-    { slug: "mohsin", name: "Mohsin", display: "Mohsin", role: "Team Member", short: "Team Member", team: "Team" },
+
+    { slug: "usman-imtiaz", name: "Usman Imtiaz", display: "Imtiaz", role: "Growth Marketing Strategist", short: "Growth Wizard", team: "Growth" },
+    { slug: "saad-u-ghani", name: "Saad u Ghani", display: "Saad", role: "Performance Marketing Specialist", short: "Ad Ninja", team: "Performance" },
+    { slug: "ghazanfar", name: "Muhammad Ghazanfar", display: "Ghazanfar", role: "Web Experience Architect", short: "Code Commander", team: "Development" },
+    { slug: "shiza-ahmed", name: "Shiza Ahmed", display: "Shiza", role: "Organic Growth Specialist", short: "SEO Sorcerer", team: "SEO" },
+    { slug: "bilal-haider", name: "Bilal Haider", display: "Bilal", role: "Head of Organic Growth", short: "Search Boss", team: "SEO" },
+    { slug: "awais-shahid", name: "Awais Shahid", display: "Awais", role: "Creative Content Producer", short: "Content Alchemist", team: "Content" },
+    { slug: "bazal-waheed", name: "Bazal Waheed", display: "Bazal", role: "Social Media Strategist", short: "Buzzmaker", team: "Social" },
+    { slug: "hadi-abbas", name: "M. Hadi Abbas", display: "Hadi", role: "Head of Content & Storytelling", short: "Chief Content Wizard", team: "Content" },
+    { slug: "yousaf-adeel", name: "Yousaf Adeel", display: "Yousaf", role: "Creative Director", short: "Creative Rockstar", team: "Creative" },
+    { slug: "asad-ahmed", name: "Asad Ahmed", display: "Asad", role: "Senior Visual Storyteller", short: "Motion Magician", team: "Motion" },
+    { slug: "mohsin", name: "Mohsin", display: "Mohsin", role: "Video Content Specialist", short: "Frame Ninja", team: "Creative" },
   ],
 };
