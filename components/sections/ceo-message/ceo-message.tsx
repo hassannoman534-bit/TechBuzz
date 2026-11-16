@@ -218,8 +218,14 @@ export function CeoMessage(): React.ReactElement {
         </div>
 
         {/* ── Layer 3, nearest ──────────────────────────────────────────── */}
+        {/*
+          pointer-events-none matters. This wrapper is inset-0, so it covers the
+          whole hero at z-20 and was eating every pointer event over the word
+          underneath it, which killed the liquid hover. The figure inside turns
+          events back on for its own box so its sweep still works.
+        */}
         <motion.div
-          className="absolute inset-0 z-20"
+          className="pointer-events-none absolute inset-0 z-20"
           style={layer(figY, figScale) as React.CSSProperties}
         >
           <CeoFigure play={introDone} stacked={stacked} />

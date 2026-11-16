@@ -73,7 +73,7 @@ export function CeoFigure({ play, stacked }: CeoFigureProps): React.ReactElement
 
   return (
     <motion.div
-      className="absolute bottom-0 z-20"
+      className="pointer-events-auto absolute bottom-0 z-20"
       style={{
         right: `${rightPct}%`,
         // Height drives it: a standing person is read by height. Width comes
