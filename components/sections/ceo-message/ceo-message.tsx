@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
 import { LiquidText } from "@/components/ui/liquid-text";
 import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
+import { BeliefLetter } from "./belief-letter";
 import { ceoMessage, EASE, LIQUID } from "./ceo-message.config";
 import { CeoPortrait } from "./ceo-portrait";
 import { CeoSignoff } from "./ceo-signoff";
@@ -21,7 +22,8 @@ const { heading } = ceoMessage;
  * 2. The hero is a split: the line of copy and the liquid word sit hard left in
  *    one column, the portrait travels in from the right in the other.
  * 3. PerspectiveMessage carries the message through the camera on scroll.
- * 4. CeoSignoff closes with the second liquid surface.
+ * 4. BeliefLetter lands it as an object: the sheet it was written on.
+ * 5. CeoSignoff closes with the second liquid surface.
  *
  * Why two columns rather than one centre axis: the centred draft stacked the
  * word and the portrait on the same vertical line, so the only thing keeping
@@ -192,6 +194,7 @@ export function CeoMessage(): React.ReactElement {
       </section>
 
       <PerspectiveMessage />
+      <BeliefLetter />
       <CeoSignoff />
     </>
   );
