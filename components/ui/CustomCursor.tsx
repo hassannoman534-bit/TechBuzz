@@ -64,8 +64,8 @@ function CursorInner() {
   const ringScale       = mode === "magnetic" ? 2.5 : mode === "text" ? 4 : 1;
   const ringOpacity     = isExplore ? 0 : 1;
   const ringBorderColor = mode === "magnetic" ? "rgba(56,189,248,0.6)" : "rgba(255,255,255,0.4)";
-  const ringBg          = mode === "text" ? "rgba(255,255,255,0.08)" : "transparent";
-  const ringBlur        = mode === "text" ? "blur(4px)" : "none";
+  const ringBg          = mode === "text" ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0)";
+  const ringBlur        = mode === "text" ? "blur(4px)" : "blur(0px)";
 
   const baseStyle: React.CSSProperties = {
     position:      "fixed",

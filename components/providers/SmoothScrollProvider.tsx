@@ -20,6 +20,7 @@ export default function SmoothScrollProvider({ children }: SmoothScrollProviderP
         lerp: 0.08,
         duration: 1.4,
         smoothWheel: true,
+        anchors: true,
       }}
     >
       <LenisSyncInner>{children}</LenisSyncInner>
