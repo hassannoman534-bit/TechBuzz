@@ -74,6 +74,43 @@ export function CeoMessage(): React.ReactElement {
     return () => window.removeEventListener("resize", update);
   }, []);
 
+  /*
+    The kicker and the word are one lockup, and the gap between them is not a
+    margin. LiquidText's box is 1.6x its font size with the baseline at 53% of
+    it, so roughly 27.8% of the box above the ink is empty canvas. The box is
+    measured rather than derived, because the word is height bound on a wide
+    window and width bound at 1366, so the two give different answers.
+
+    Observing the box and pulling it up by what is actually empty is also what
+    gives the kicker its room under the navbar pill: the column is centred, so
+    a shorter column settles lower.
+  */
+  const wordBoxRef = useRef<HTMLDivElement>(null);
+  const [wordBoxH, setWordBoxH] = useState(0);
+  useEffect(() => {
+    const el = wordBoxRef.current;
+    if (!el) return;
+    // A negative margin does not change the element's own height, so this
+    // cannot feed back into itself.
+    const ro = new ResizeObserver(([entry]) => {
+      const h = entry.contentRect.height;
+      setWordBoxH((prev) => (Math.abs(prev - h) < 1 ? prev : h));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  /** Negative once the box is real. Undefined before, so the class stays. */
+  const lockupPull = ((): number | undefined => {
+    if (wordBoxH <= 0) return undefined;
+    const dead = wordBoxH * HERO_WORD.deadTopRatio;
+    const gap = Math.min(
+      HERO_WORD.gapMaxPx,
+      Math.max(HERO_WORD.gapMinPx, wordBoxH * HERO_WORD.gapRatio),
+    );
+    return Math.round(gap - dead);
+  })();
+
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"],
@@ -131,7 +168,7 @@ export function CeoMessage(): React.ReactElement {
             decides where the word lands on first paint, and the boolean is
             only correct after the first client measurement.
           */
-          className="absolute inset-0 z-10 flex items-start px-[clamp(1.25rem,5vw,5rem)] pt-[clamp(5.5rem,11vh,7.5rem)] lg:items-center"
+          className="absolute inset-0 z-10 flex items-start px-[clamp(1.25rem,5vw,5rem)] pt-[clamp(6.25rem,11vh,7.5rem)] lg:items-center"
         >
           <div
             className="mx-auto w-full"
@@ -145,8 +182,17 @@ export function CeoMessage(): React.ReactElement {
             <h1 className="sr-only">{heading.srHeading}</h1>
 
             <motion.p
-              className="font-footer-text mx-auto max-w-[46ch] text-center text-[clamp(0.92rem,1.2vw,1.06rem)] leading-relaxed text-white/55"
-              style={reduce ? undefined : { y: kickerY, opacity: kickerOpacity }}
+              className="font-footer-text mx-auto max-w-[46ch] text-center text-white/65"
+              style={{
+                // Inline, because these are the sizes that tie the line to the
+                // word under it and arbitrary Tailwind values have been
+                // dropped in this build before.
+                fontSize: "clamp(0.95rem, 1.15vw, 1.08rem)",
+                lineHeight: 1.45,
+                letterSpacing: "0.015em",
+                fontWeight: 500,
+                ...(reduce ? {} : { y: kickerY, opacity: kickerOpacity }),
+              }}
               {...fade(0)}
             >
               {heading.sub}
@@ -163,9 +209,14 @@ export function CeoMessage(): React.ReactElement {
               at whatever fits the box, which on a phone is a fraction of that.
             */}
             <motion.div
+              ref={wordBoxRef}
               className="mt-[clamp(0.4rem,1.4vh,1rem)] w-full"
               style={{
                 minHeight: "clamp(4.5rem, 21vw, 15rem)",
+                // Negative: pulls the word's empty top band up under the
+                // kicker so the two read as one lockup. Undefined until the
+                // box has been measured, which leaves the class in charge.
+                ...(lockupPull !== undefined ? { marginTop: lockupPull } : null),
                 ...(layer(wordY, wordScale) as React.CSSProperties),
               }}
               {...fade(0.12)}

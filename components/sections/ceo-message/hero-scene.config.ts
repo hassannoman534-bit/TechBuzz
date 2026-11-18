@@ -106,6 +106,31 @@ export const HERO_WORD = {
   /** Pushed up off centre so the figure's torso crosses it, not his face. */
   offsetYPct: -6,
   /**
+   * The lockup pull, in one measured number.
+   *
+   * LiquidText sizes its box at 1.6x the font size and sets the baseline at
+   * 53% of that box, so the glyphs sit low inside it and the space above the
+   * ink is empty canvas, not CSS. Measured in Chrome at 1915x835, 1366x650
+   * and 390x844, the empty band was 174px of 627, 136px of 490 and 40px of
+   * 144: a ratio of 0.277, 0.278 and 0.281. It is stable because it falls out
+   * of LiquidText's own layout maths rather than any one viewport, which is
+   * also why a fixed pixel pull would be wrong. At 1366 the word is width
+   * bound rather than height bound and its canvas is 137px shorter than the
+   * ceiling suggests.
+   *
+   * The band is not waste. The sprung trail beads are drawn into it, so the
+   * pull closes most of it and deliberately leaves the rest.
+   */
+  deadTopRatio: 0.278,
+  /**
+   * The gap wanted between the kicker and the cap height, as a share of the
+   * word box, clamped. Scales with the word instead of holding one pixel
+   * value that reads as tight at 390 and loose at 1915.
+   */
+  gapRatio: 0.1,
+  gapMinPx: 24,
+  gapMaxPx: 72,
+  /**
    * Zero, because stacked the column is anchored to the top of the hero rather
    * than centred in it. Nudging a centred column upward by a percentage of its
    * own height was the first attempt and it does not survive a copy change:
