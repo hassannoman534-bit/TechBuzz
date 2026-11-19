@@ -40,3 +40,63 @@ export const tunnelHeroContent: TunnelHeroContent = {
     { label: "Product Photography", tint: ["#2a2410", "#e8c26b"] },
   ],
 };
+
+/**
+ * Depth of field for the corridor.
+ *
+ * Two jobs, and the second one matters more than it looks. The cards and the
+ * headline are planes in one preserve-3d context, and a card is rotated up to
+ * 24deg off the headline's plane, so the two intersect geometrically and the
+ * browser splits them along the intersection line. That is the razor cut
+ * through the glyphs: correct depth sorting, wrong looking.
+ *
+ * Giving a card a filter puts it on its own render surface, and a render
+ * surface is composited as one flat quad at one depth instead of being split
+ * against other planes. So the blur removes the intersection as well as
+ * softening the edge that does the occluding.
+ *
+ * Blur is quantised because a changed filter string re-rasterises the card.
+ * At 0.5px steps a card re-rasterises on the order of thirty times across the
+ * whole fly-through instead of on every frame.
+ */
+export const TUNNEL_DOF = {
+  /** Where the blur starts picking up, in z. Behind the headline (z=0) on
+   *  purpose: a card crossing the headline's own depth already carries a few
+   *  px, which hides the moment its sort order flips. */
+  nearFrom: -200,
+  nearSpan: 620,
+  nearMaxBlurPx: 15,
+  /** Near cards darken so a huge foreground card does not blow out the page. */
+  nearMaxDim: 0.3,
+  /** Atmospheric softening at the far end, on top of the existing fog fade. */
+  farFrom: -1200,
+  farSpan: 1500,
+  farMaxBlurPx: 3,
+  /** Rounded to this many px. Fewer distinct strings, fewer re-rasters. */
+  stepPx: 0.5,
+  /** Below this, no filter at all rather than a filter that does nothing. */
+  minPx: 0.35,
+} as const;
+
+/**
+ * How the headline answers a card passing through it. Transform only: a filter
+ * here would re-rasterise live text every frame and flatten the block.
+ */
+export const TUNNEL_PRESSURE = {
+  /** Depth band either side of the headline that counts as a pass-through. */
+  bandZ: 760,
+  /** Padding around the headline box counted as an overlap, in px. */
+  padPx: 90,
+  /** Peak recoil. Small on purpose, it reads as weight rather than wobble. */
+  maxScaleDrop: 0.014,
+  maxPushPx: 7,
+  /** Smoothing on the pressure value so a card entering the band is not a step. */
+  lerp: 0.12,
+} as const;
+
+/** The sub paragraph clears out on scroll, once its entrance has finished. */
+export const TUNNEL_SUB = {
+  fadeFrom: 0.02,
+  fadeTo: 0.18,
+  risePx: -26,
+} as const;

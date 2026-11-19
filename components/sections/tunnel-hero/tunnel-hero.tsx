@@ -1,11 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { motion, useMotionValueEvent, useScroll, useSpring } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
-import { tunnelHeroContent, type TunnelHeroContent } from "./tunnel-hero.config";
+import {
+  tunnelHeroContent,
+  TUNNEL_DOF,
+  TUNNEL_PRESSURE,
+  TUNNEL_SUB,
+  type TunnelHeroContent,
+} from "./tunnel-hero.config";
 
 type TunnelHeroProps = {
   content?: TunnelHeroContent;
@@ -59,10 +65,25 @@ export function TunnelHero({ content = tunnelHeroContent, length = 300, backgrou
   const cards = useRef<(HTMLDivElement | null)[]>([]);
   const title = useRef<HTMLDivElement>(null);
   const cue = useRef<HTMLDivElement>(null);
+  const sub = useRef<HTMLParagraphElement>(null);
   const slots = useRef<Slot[]>([]);
+  /** The sub's entrance owns its style until it is done; then scroll does. */
+  const introDone = useRef(false);
+  /** Smoothed, so a card entering the band ramps instead of stepping. */
+  const pressure = useRef(0);
+  /** Last filter string per card, so an unchanged one is never re-assigned. */
+  const lastFilter = useRef<string[]>([]);
+  /** Half extents of the headline box, refreshed on resize with everything else. */
+  const titleBox = useRef({ hw: 0, hh: 0 });
+  const cardHalf = useRef({ w: 0, h: 0 });
 
   const { scrollYProgress } = useScroll({ target: section, offset: ["start start", "end end"] });
   const progress = useSpring(scrollYProgress, { stiffness: 90, damping: 24, mass: 0.5, restDelta: 0.0002 });
+
+  const quantise = (v: number): number =>
+    Math.round(v / TUNNEL_DOF.stepPx) * TUNNEL_DOF.stepPx;
+
+  const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
   const apply = (p: number): void => {
     const travel = reduce ? TRAVEL * 0.35 : p * TRAVEL;
@@ -70,6 +91,7 @@ export function TunnelHero({ content = tunnelHeroContent, length = 300, backgrou
     // on scroll (not at rest). Under reduced motion the corridor is frozen mid-flight, so it
     // must stay visible — skip the gate there.
     const reveal = reduce ? 1 : Math.min(1, Math.max(0, p / 0.08));
+    let peak = 0;
     slots.current.forEach((s, i) => {
       const el = cards.current[i];
       if (!el) return;
@@ -85,11 +107,60 @@ export function TunnelHero({ content = tunnelHeroContent, length = 300, backgrou
       el.style.visibility = "visible";
       el.style.opacity = o.toFixed(3);
       el.style.transform = `translate3d(${s.x.toFixed(1)}px, ${s.y.toFixed(1)}px, ${z.toFixed(1)}px) rotateY(${s.ry.toFixed(2)}deg) rotateX(${s.rx.toFixed(2)}deg) rotateZ(${s.rz}deg)`;
+
+      // Depth of field. The blur is what stops the card's plane being split
+      // against the headline's, so it is doing structural work, not only
+      // cosmetic. Quantised, and compared against the last string, because a
+      // changed filter re-rasterises the card.
+      const nearT = clamp01((z - TUNNEL_DOF.nearFrom) / TUNNEL_DOF.nearSpan);
+      const farT = clamp01((TUNNEL_DOF.farFrom - z) / TUNNEL_DOF.farSpan);
+      const blur = quantise(
+        nearT * TUNNEL_DOF.nearMaxBlurPx + farT * TUNNEL_DOF.farMaxBlurPx,
+      );
+      const dim = Math.round(nearT * TUNNEL_DOF.nearMaxDim * 20) / 20;
+      const filter =
+        blur < TUNNEL_DOF.minPx && dim <= 0
+          ? "none"
+          : `blur(${blur}px) brightness(${(1 - dim).toFixed(2)})`;
+      if (lastFilter.current[i] !== filter) {
+        lastFilter.current[i] = filter;
+        el.style.filter = filter;
+      }
+
+      // How much this card is pressing through the headline: near its depth
+      // and overlapping its box, in projected screen space rather than slot
+      // space, since a near card covers far more of the page than its slot.
+      const sc = P / (P - z);
+      if (sc > 0 && titleBox.current.hw > 0) {
+        const exW = titleBox.current.hw + cardHalf.current.w * sc + TUNNEL_PRESSURE.padPx;
+        const exH = titleBox.current.hh + cardHalf.current.h * sc + TUNNEL_PRESSURE.padPx;
+        const ox = clamp01(1 - Math.abs(s.x * sc) / exW);
+        const oy = clamp01(1 - Math.abs(s.y * sc) / exH);
+        const dz = clamp01(1 - Math.abs(z) / TUNNEL_PRESSURE.bandZ);
+        const c = ox * oy * dz;
+        if (c > peak) peak = c;
+      }
     });
     // Headline stays fully visible the whole way through — no end-of-scroll fade or z-push.
+    // It does answer a card passing through it: a small recoil, transform only.
+    pressure.current += (peak - pressure.current) * TUNNEL_PRESSURE.lerp;
+    const pr = Math.round(pressure.current / 0.02) * 0.02;
     if (title.current) {
       title.current.style.opacity = "1";
-      title.current.style.transform = "translateZ(0px)";
+      title.current.style.transform =
+        pr <= 0
+          ? "translateZ(0px)"
+          : `translate3d(0px, ${(pr * TUNNEL_PRESSURE.maxPushPx).toFixed(1)}px, 0px) scale(${(1 - pr * TUNNEL_PRESSURE.maxScaleDrop).toFixed(4)})`;
+    }
+
+    // The sub finishes its entrance, then belongs to the scroll: it lifts and
+    // clears out before the corridor gets busy enough to cut through it.
+    if (sub.current && introDone.current && !reduce) {
+      const t = clamp01(
+        (p - TUNNEL_SUB.fadeFrom) / (TUNNEL_SUB.fadeTo - TUNNEL_SUB.fadeFrom),
+      );
+      sub.current.style.opacity = (1 - t).toFixed(3);
+      sub.current.style.transform = `translate3d(0px, ${(t * TUNNEL_SUB.risePx).toFixed(1)}px, 0px)`;
     }
     if (cue.current) cue.current.style.opacity = Math.max(0, 1 - p * 8).toFixed(3);
   };
@@ -103,6 +174,10 @@ export function TunnelHero({ content = tunnelHeroContent, length = 300, backgrou
       cards.current.forEach((el, i) => {
         if (el) el.style.display = i < count ? "" : "none";
       });
+      const t = title.current;
+      if (t) titleBox.current = { hw: t.offsetWidth / 2, hh: t.offsetHeight / 2 };
+      const c0 = cards.current[0];
+      if (c0) cardHalf.current = { w: c0.offsetWidth / 2, h: c0.offsetHeight / 2 };
       apply(progress.get());
     };
     measure();
@@ -110,6 +185,10 @@ export function TunnelHero({ content = tunnelHeroContent, length = 300, backgrou
     return () => window.removeEventListener("resize", measure);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content.cards.length, reduce]);
+
+  useEffect(() => {
+    if (reduce) introDone.current = true;
+  }, [reduce]);
 
   useMotionValueEvent(progress, "change", apply);
 
@@ -183,9 +262,15 @@ export function TunnelHero({ content = tunnelHeroContent, length = 300, backgrou
                   ))}
                 </h1>
                 <motion.p
+                  ref={sub}
                   initial={reduce ? false : { opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 1.1, ease: EASE, delay: 0.6 }}
+                  /* Scroll only takes the sub over once its entrance has
+                     finished, so the two never write the same style at once. */
+                  onAnimationComplete={() => {
+                    introDone.current = true;
+                  }}
                   className="mx-auto mt-[clamp(0.9rem,2.4svh,1.6rem)] max-w-[44ch] text-balance text-[clamp(0.92rem,1.05vw,1.1rem)] leading-relaxed text-white/60"
                 >
                   {content.sub}
