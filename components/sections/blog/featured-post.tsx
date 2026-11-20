@@ -3,69 +3,72 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRef } from "react";
-import { motion, useMotionValue, useMotionTemplate } from "framer-motion";
-import { cn } from "@/lib/utils";
-import { useFinePointer } from "@/lib/use-fine-pointer";
+import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
+import { ArrowUpRight } from "lucide-react";
 import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
+import { useFinePointer } from "@/lib/use-fine-pointer";
 import type { BlogPost } from "@/lib/wp";
 import { BLOG_COPY, BLOG_GRID, BLOG_MOTION } from "./blog.config";
 
 type FeaturedPostProps = { post: BlogPost };
 
 /**
- * The newest post, with a rim glow that tracks the pointer.
- *
- * The glow is a motion template on a child layer, not React state, so a
- * pointermove never re-renders this component. The layer is inset-0 and would
- * otherwise eat every click on the card, hence pointer-events-none on it.
+ * The newest post, given the width it deserves. Asymmetric 7/5 split rather
+ * than a halved row, so it reads as a lead feature and not as an oversized
+ * grid card.
  */
 export function FeaturedPost({ post }: FeaturedPostProps) {
   const reduce = useReducedMotionSafe();
   const fine = useFinePointer();
-  const box = useRef<HTMLDivElement>(null);
-  const mx = useMotionValue(-9999);
-  const my = useMotionValue(-9999);
+  const interactive = !reduce && fine;
 
-  const glow = useMotionTemplate`radial-gradient(${BLOG_MOTION.rimRadiusPx}px circle at ${mx}px ${my}px, rgb(123 97 255 / 0.22), transparent 70%)`;
+  const ref = useRef<HTMLDivElement>(null);
+  const px = useMotionValue(-9999);
+  const py = useMotionValue(-9999);
 
-  const track = (e: React.PointerEvent<HTMLDivElement>): void => {
-    if (!fine || reduce) return;
-    const r = box.current?.getBoundingClientRect();
+  // A rim that follows the cursor around the border of the panel.
+  const rim = useMotionTemplate`radial-gradient(${BLOG_MOTION.rimRadiusPx}px circle at ${px}px ${py}px, rgba(167,139,250,0.55), rgba(34,216,255,0.18) 42%, transparent 70%)`;
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!interactive) return;
+    const r = ref.current?.getBoundingClientRect();
     if (!r) return;
-    mx.set(e.clientX - r.left);
-    my.set(e.clientY - r.top);
+    px.set(e.clientX - r.left);
+    py.set(e.clientY - r.top);
   };
 
-  const leave = (): void => {
-    mx.set(-9999);
-    my.set(-9999);
+  const onLeave = () => {
+    px.set(-9999);
+    py.set(-9999);
   };
 
   return (
     <motion.div
-      ref={box}
-      onPointerMove={track}
-      onPointerLeave={leave}
-      initial={reduce ? false : { opacity: 0, y: 28 }}
+      ref={ref}
+      initial={reduce ? false : { opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-80px" }}
       transition={{ duration: 0.8, ease: BLOG_MOTION.ease }}
-      className="group relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] shadow-[inset_0_1px_0_0_rgb(255_255_255/0.07)]"
+      onPointerMove={onPointerMove}
+      onPointerLeave={onLeave}
+      className="group relative"
     >
-      {fine && !reduce ? (
-        <motion.div
+      {/* The rim is a gradient layer behind the panel, revealed only through
+          a one pixel inset. Cheaper and sharper than animating a box-shadow. */}
+      {interactive ? (
+        <motion.span
           aria-hidden
-          className="pointer-events-none absolute inset-0 z-10 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-          style={{ background: glow }}
+          style={{ background: rim }}
+          className="pointer-events-none absolute -inset-px rounded-[1.75rem] opacity-0 transition-opacity duration-500 group-hover:opacity-100"
         />
       ) : null}
 
       <Link
         href={`/blog/${post.slug}`}
-        className="relative z-20 grid gap-0 outline-none md:grid-cols-2 focus-visible:ring-2 focus-visible:ring-[#7b61ff]/40"
+        className="relative grid overflow-hidden rounded-[1.7rem] border border-white/10 bg-[#070b16] shadow-[inset_0_1px_0_0_rgb(255_255_255/0.07)] outline-none transition-colors duration-500 hover:border-white/20 focus-visible:border-[#7b61ff] focus-visible:ring-2 focus-visible:ring-[#7b61ff]/45 lg:grid-cols-12"
       >
         <div
-          className="relative w-full overflow-hidden bg-[#070b16]"
+          className="relative overflow-hidden lg:col-span-7"
           style={{ minHeight: BLOG_GRID.featuredMinHeightPx }}
         >
           {post.image ? (
@@ -74,43 +77,69 @@ export function FeaturedPost({ post }: FeaturedPostProps) {
               alt={post.image.alt}
               fill
               priority
-              sizes="(min-width: 768px) 50vw, 92vw"
-              className={cn(
-                "object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] transform-gpu",
-                !reduce && "group-hover:scale-[1.04]",
-              )}
+              sizes="(min-width: 1024px) 58vw, 100vw"
+              className={
+                reduce
+                  ? "object-cover"
+                  : "object-cover transform-gpu transition-transform duration-[1100ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.05]"
+              }
             />
           ) : (
-            <div className="absolute inset-0 bg-[linear-gradient(150deg,#251d5c,#05070f)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(145deg,#1b2b55,#05070f)]" />
           )}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,transparent,rgb(3_7_18/0.35))]" />
+
+          <div
+            aria-hidden
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(to right, rgba(3,7,18,0) 55%, rgba(7,11,22,0.95) 100%)",
+            }}
+          />
+
+          <span className="font-footer-text absolute left-5 top-5 rounded-full border border-white/15 bg-black/35 px-3 py-1 text-[0.62rem] uppercase tracking-[0.22em] text-[#7ce9ff]">
+            {BLOG_COPY.featuredTag}
+          </span>
         </div>
 
-        <div className="flex flex-col justify-center gap-4 p-6 md:p-9">
-          <p className="font-footer-text truncate text-[0.7rem] uppercase tracking-[0.2em] text-[#7ce9ff]/80">
-            {BLOG_COPY.featuredTag}
-            <span className="px-2 text-white/25">/</span>
-            {post.categoryNames[0] ?? "Insight"}
-            <span className="px-2 text-white/25">/</span>
-            {post.readMinutes} min read
+        <div className="flex flex-col justify-center gap-5 p-[clamp(1.5rem,3.2vw,3rem)] lg:col-span-5">
+          <p className="font-footer-text flex items-center gap-2 text-[0.68rem] uppercase tracking-[0.2em] text-[#c9c2ff]/75">
+            <span className="truncate">{post.categoryNames[0] ?? "Insight"}</span>
+            <span className="text-white/20">/</span>
+            <span className="shrink-0 text-white/45">{post.readMinutes} min read</span>
           </p>
 
           <h2 className="text-balance">
-            <span className="font-footer-display text-[clamp(1.4rem,2.4vw,2.1rem)] font-semibold leading-[1.15] text-white">
+            <span
+              className="font-footer-display font-semibold leading-[1.08] tracking-[-0.015em] text-white"
+              style={{ fontSize: "clamp(1.6rem,3vw,2.5rem)" }}
+            >
               {post.title}
             </span>
           </h2>
 
           {post.excerpt ? (
-            <p className="font-footer-text max-w-[52ch] text-[0.95rem] leading-relaxed text-white/60">
+            <p className="font-footer-text max-w-[46ch] text-[0.95rem] leading-relaxed text-white/60">
               {post.excerpt}
             </p>
           ) : null}
 
-          <p className="font-footer-text text-[0.75rem] text-white/40">
-            {post.author ? `${post.author} / ` : ""}
-            {post.dateLabel}
-          </p>
+          <div className="mt-2 flex items-center justify-between gap-4 border-t border-white/10 pt-5">
+            <p className="font-footer-text text-[0.74rem] text-white/45">
+              {post.author ? `${post.author} / ` : ""}
+              {post.dateLabel}
+            </p>
+            <span
+              aria-hidden
+              className="font-footer-text flex items-center gap-1.5 text-[0.78rem] text-white/70 transition-colors duration-300 group-hover:text-[#7ce9ff]"
+            >
+              {BLOG_COPY.readMore}
+              <ArrowUpRight
+                className="size-4 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                strokeWidth={2}
+              />
+            </span>
+          </div>
         </div>
       </Link>
     </motion.div>

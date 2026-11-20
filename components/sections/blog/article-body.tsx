@@ -34,10 +34,22 @@ const PROSE = `
 .wp-prose h1,.wp-prose h2,.wp-prose h3,.wp-prose h4,.wp-prose h5,.wp-prose h6{
   font-family:var(--font-outfit),ui-sans-serif,system-ui,sans-serif;
   font-weight:600;color:#fff;letter-spacing:-0.015em;text-wrap:balance;line-height:1.25}
-.wp-prose h2{font-size:1.5rem;margin-top:2.2em}
-.wp-prose h3{font-size:1.2rem;margin-top:1.9em}
+.wp-prose h2{font-size:1.6rem;margin-top:2.3em;position:relative;padding-top:1.1em}
+/* A hairline above every h2 gives the body a visible chapter rhythm without
+   asking the writers to add anything in WordPress. */
+.wp-prose h2::before{content:"";position:absolute;top:0;left:0;width:2.25rem;height:1px;
+  background:linear-gradient(90deg,#7b61ff,rgb(34 216 255/0))}
+.wp-prose h3{font-size:1.22rem;margin-top:1.9em}
 .wp-prose h4,.wp-prose h5,.wp-prose h6{font-size:1.02rem;margin-top:1.7em}
 .wp-prose p{margin-top:1.15em}
+/* Opening paragraph only, and only when it really is the opening paragraph.
+   :first-child guards against a post that starts with an image or a heading. */
+.wp-prose>p:first-child{font-size:1.16rem;line-height:1.65;color:rgb(255 255 255/0.84)}
+.wp-prose>p:first-child::first-letter{float:left;font-family:var(--font-outfit),sans-serif;
+  font-size:3.4em;line-height:0.82;font-weight:600;color:#fff;
+  margin:0.06em 0.11em 0 0;
+  background:linear-gradient(160deg,#c9c2ff,#7b61ff);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .wp-prose a{color:#c9c2ff;text-decoration:underline;text-underline-offset:3px;
   text-decoration-color:rgb(201 194 255/0.35);transition:color .3s,text-decoration-color .3s}
 .wp-prose a:hover{color:#fff;text-decoration-color:rgb(255 255 255/0.6)}
@@ -47,8 +59,14 @@ const PROSE = `
 .wp-prose ol{list-style:decimal}
 .wp-prose li{margin-top:0.5em}
 .wp-prose li::marker{color:rgb(123 97 255/0.8)}
-.wp-prose blockquote{border-left:2px solid rgb(123 97 255/0.5);padding:0.2em 0 0.2em 1.1em;
-  color:rgb(255 255 255/0.82);font-style:normal}
+.wp-prose blockquote{position:relative;margin-top:2em;border:1px solid rgb(255 255 255/0.09);
+  border-radius:1rem;background:rgb(255 255 255/0.025);padding:1.4em 1.5em;
+  color:rgb(255 255 255/0.86);font-size:1.08rem;line-height:1.6;font-style:normal;
+  box-shadow:inset 0 1px 0 0 rgb(255 255 255/0.05)}
+.wp-prose blockquote::before{content:"";position:absolute;left:0;top:1.2em;bottom:1.2em;width:2px;
+  border-radius:2px;background:linear-gradient(180deg,#7b61ff,#22d8ff)}
+.wp-prose blockquote p{margin-top:0.7em}
+.wp-prose blockquote p:first-child{margin-top:0}
 .wp-prose code{background:rgb(255 255 255/0.06);border-radius:4px;padding:0.15em 0.4em;font-size:0.9em}
 .wp-prose pre{background:rgb(255 255 255/0.04);border:1px solid rgb(255 255 255/0.1);
   border-radius:12px;padding:1em;overflow-x:auto}

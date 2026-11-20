@@ -6,6 +6,8 @@ import { ArrowLeft } from "lucide-react";
 import { SiteFooter } from "@/components/sections/site-footer/site-footer";
 import { ArticleBody } from "@/components/sections/blog/article-body";
 import { BlogCta } from "@/components/sections/blog/blog-cta";
+import { BlogFieldMount } from "@/components/sections/blog/blog-field-mount";
+import { RelatedGrid } from "@/components/sections/blog/related-grid";
 import { ReadingProgress } from "@/components/sections/blog/reading-progress";
 import { BLOG_COPY, BLOG_GRID } from "@/components/sections/blog/blog.config";
 import { getPostBySlug, getRelated, type BlogPost } from "@/lib/wp";
@@ -81,8 +83,12 @@ async function Article({ post }: { post: BlogPost }) {
 
   return (
     <>
-      <article className="px-[clamp(1.25rem,6vw,8rem)] pb-[clamp(3rem,8vh,5rem)] pt-[clamp(7rem,16vh,10rem)]">
-        <div className="mx-auto w-full max-w-[52rem]">
+      {/* The field runs behind the title only. It pauses the moment the
+          header scrolls away, so it costs nothing while someone reads. */}
+      <header className="relative isolate overflow-hidden px-[clamp(1.25rem,6vw,8rem)] pb-[clamp(2rem,5vh,3.5rem)] pt-[clamp(7rem,16vh,10rem)]">
+        <BlogFieldMount />
+
+        <div className="relative z-10 mx-auto w-full max-w-[52rem]">
           <Link
             href="/blog"
             className="font-footer-text inline-flex items-center gap-2 text-[0.78rem] text-white/45 outline-none transition-colors duration-300 hover:text-white focus-visible:text-white"
@@ -100,19 +106,27 @@ async function Article({ post }: { post: BlogPost }) {
           </p>
 
           <h1 className="mt-4 text-balance">
-            <span className="font-footer-display text-[clamp(1.8rem,4vw,3.1rem)] font-semibold leading-[1.1] tracking-[-0.025em] text-white">
+            <span className="font-footer-display text-[clamp(1.9rem,4.4vw,3.4rem)] font-semibold leading-[1.07] tracking-[-0.028em] text-white">
               {post.title}
             </span>
           </h1>
 
           {post.author ? (
-            <p className="font-footer-text mt-5 text-[0.85rem] text-white/50">
+            <p className="font-footer-text mt-6 flex items-center gap-3 text-[0.85rem] text-white/50">
+              <span
+                aria-hidden
+                className="h-px w-8 bg-gradient-to-r from-[#7b61ff] to-transparent"
+              />
               {post.author}
             </p>
           ) : null}
+        </div>
+      </header>
 
+      <article className="px-[clamp(1.25rem,6vw,8rem)] pb-[clamp(3rem,8vh,5rem)]">
+        <div className="mx-auto w-full max-w-[52rem]">
           {post.image ? (
-            <div className="relative mt-9 w-full overflow-hidden rounded-2xl border border-white/10 bg-[#070b16]">
+            <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-[#070b16]">
               <Image
                 src={post.image.url}
                 alt={post.image.alt}
@@ -146,26 +160,7 @@ async function Article({ post }: { post: BlogPost }) {
                 {BLOG_COPY.relatedTitle}
               </span>
             </h2>
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {related.map((r) => (
-                <Link
-                  key={r.id}
-                  href={`/blog/${r.slug}`}
-                  className="group flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-5 outline-none transition-colors duration-300 hover:border-white/20 focus-visible:border-[#7b61ff]"
-                >
-                  <p className="font-footer-text truncate text-[0.68rem] uppercase tracking-[0.18em] text-[#c9c2ff]/60">
-                    {r.categoryNames[0] ?? "Insight"}
-                    <span className="px-2 text-white/25">/</span>
-                    {r.readMinutes} min read
-                  </p>
-                  <h3 className="text-balance">
-                    <span className="font-footer-display text-[0.98rem] font-semibold leading-snug text-white transition-colors duration-300 group-hover:text-[#c9c2ff]">
-                      {r.title}
-                    </span>
-                  </h3>
-                </Link>
-              ))}
-            </div>
+            <RelatedGrid posts={related} />
           </div>
         </section>
       ) : null}
