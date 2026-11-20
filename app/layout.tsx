@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Urbanist, Syne, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import SmoothScrollProvider from "@/components/providers/SmoothScrollProvider";
 import CustomCursor from "@/components/ui/CustomCursor";
@@ -8,31 +8,41 @@ import { HideOnScroll } from "@/components/ui/hide-on-scroll";
 import { AtmosphereController } from "@/components/atmosphere/atmosphere-controller";
 import { pretendard, newsreader, caveat, lexendGiga, outfit, interTight, montserrat } from "./fonts";
 
-const geistSans = Geist({
+/**
+ * Self-hosted via @fontsource's variable woff2 files, through next/font/local
+ * rather than next/font/google. See the long comment at the top of ./fonts.ts
+ * for why: next/font/google depends on Turbopack reaching Google's font CDN
+ * at build time, and on a host where that fails the build dies with "Module
+ * not found: Can't resolve '@vercel/turbopack-next/internal/font/google/font'".
+ * Do not move any of these back to next/font/google.
+ */
+const geistSans = localFont({
+  src: "../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2",
+  weight: "100 900",
   variable: "--font-geist-sans",
-  subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: "../node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2",
+  weight: "100 900",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
 });
 
-const urbanist = Urbanist({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+const urbanist = localFont({
+  src: "../node_modules/@fontsource-variable/urbanist/files/urbanist-latin-wght-normal.woff2",
+  weight: "100 900",
   variable: "--font-urbanist",
 });
 
-const syne = Syne({
-  subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
+const syne = localFont({
+  src: "../node_modules/@fontsource-variable/syne/files/syne-latin-wght-normal.woff2",
+  weight: "400 800",
   variable: "--font-syne",
 });
 
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+const inter = localFont({
+  src: "../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2",
+  weight: "100 900",
   variable: "--font-inter",
 });
 
