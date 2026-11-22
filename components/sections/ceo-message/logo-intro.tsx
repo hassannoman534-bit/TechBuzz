@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { useLenis } from "lenis/react";
 import { useReducedMotionSafe } from "@/lib/use-reduced-motion-safe";
+import { GlassIconReveal } from "@/components/ui/liquid-glass-logo-reveal";
 import { ceoMessage, EASE } from "./ceo-message.config";
+import { LOGO_REVEAL } from "./logo-reveal.config";
 
 type LogoIntroProps = { onDone: () => void };
 
@@ -14,9 +16,31 @@ const { intro } = ceoMessage;
 /**
  * Phase 1. The logo alone on the void, no plate and no container.
  *
- * It arrives slightly large and soft, then settles and sharpens. Blur carries the
- * entrance and the exit so the swap between the overlay and the page reads as one
- * movement rather than two layers crossfading. Nothing animates from scale 0.
+ * The mark arrives as a liquid glass reveal: a droplet grows and lands, spreads
+ * into a glass tile that holds the mark while a band of light crosses it, then
+ * the glass lets go and leaves the mark. See logo-reveal.config.ts for the
+ * timing and for the one thing that limits how good it looks, which is that the
+ * only TechBuzz logo in the repo is a wide wordmark and the tile is square.
+ *
+ * Blur still carries the exit, so the swap between the overlay and the page
+ * reads as one movement rather than two layers crossfading. Nothing animates
+ * from scale 0.
+ *
+ * ── Three things keep this from costing the intro anything ──────────────────
+ *
+ * 1. The distance field the shader needs is built in time slices, so no single
+ *    task blocks a frame. That build is the only expensive part of this effect
+ *    and it used to be one synchronous ~100ms pass, which would have landed
+ *    directly on top of LiquidText initialising the hero's own WebGL2 context.
+ * 2. The hold starts when the reveal is ready rather than on mount, so a slow
+ *    machine gets the whole reveal instead of the overlay leaving halfway
+ *    through it. `maxHoldMs` is the ceiling that makes waiting safe.
+ * 3. Reduced motion never mounts the canvas at all. It gets the still logo, the
+ *    same fallback the rest of this page uses, and builds no field for it.
+ *
+ * The context this mounts is also transient: the overlay unmounts through
+ * AnimatePresence, so the reveal's canvas is disposed before the page's own
+ * surfaces matter. It does not add to the count this page was trimmed down to.
  *
  * Scroll is locked for the hold on `document.body`, never on <html>: <html> is
  * h-full here, and overflow:hidden there turns it into its own scroll container,
@@ -25,12 +49,42 @@ const { intro } = ceoMessage;
 export function LogoIntro({ onDone }: LogoIntroProps): React.ReactElement {
   const reduce = useReducedMotionSafe();
   const lenis = useLenis();
-  const hold = reduce ? intro.reducedHoldMs : intro.holdMs;
+
+  const glass = LOGO_REVEAL.enabled && !reduce;
+  const [ready, setReady] = useState(false);
+  const [patienceGone, setPatienceGone] = useState(false);
+  const handleReady = useCallback(() => setReady(true), []);
+
+  /*
+    The hold. Two timers, and whichever fires first wins, because onDone only
+    ever flips one boolean.
+
+    The first is the real one and does not start until the reveal can play. The
+    second is the ceiling: if the field never arrives, or arrives very late on a
+    throttled machine, the intro still hands over on time rather than holding
+    the page on a blank overlay.
+  */
+  useEffect(() => {
+    if (!glass) {
+      const id = window.setTimeout(onDone, reduce ? intro.reducedHoldMs : intro.holdMs);
+      return () => window.clearTimeout(id);
+    }
+    const ceiling = window.setTimeout(onDone, LOGO_REVEAL.maxHoldMs);
+    return () => window.clearTimeout(ceiling);
+  }, [glass, onDone, reduce]);
 
   useEffect(() => {
-    const id = window.setTimeout(onDone, hold);
+    if (!glass || !ready) return;
+    const id = window.setTimeout(onDone, LOGO_REVEAL.holdMs);
     return () => window.clearTimeout(id);
-  }, [hold, onDone]);
+  }, [glass, onDone, ready]);
+
+  /** If the reveal is slow to arrive, show the still logo rather than nothing. */
+  useEffect(() => {
+    if (!glass) return;
+    const id = window.setTimeout(() => setPatienceGone(true), LOGO_REVEAL.patienceMs);
+    return () => window.clearTimeout(id);
+  }, [glass]);
 
   useEffect(() => {
     const body = document.body;
@@ -49,6 +103,8 @@ export function LogoIntro({ onDone }: LogoIntroProps): React.ReactElement {
       window.dispatchEvent(new Event("resize"));
     };
   }, [lenis]);
+
+  const stillVisible = !glass || (patienceGone && !ready);
 
   return (
     <motion.div
@@ -88,15 +144,82 @@ export function LogoIntro({ onDone }: LogoIntroProps): React.ReactElement {
         exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 1.04, filter: "blur(10px)" }}
         transition={{ duration: reduce ? 0.3 : 1.2, ease: EASE }}
       >
-        <Image
-          src={intro.logoSrc}
-          alt={intro.logoAlt}
-          width={intro.logoWidth}
-          height={intro.logoHeight}
-          priority
-          sizes="(max-width: 640px) 64vw, 26rem"
-          className="h-auto w-[clamp(12rem,42vw,22rem)] select-none"
-        />
+        {/*
+          Both layers share one square box so neither can shift the other. The
+          box is sized off the tile, not off a viewport clamp: the engine fits
+          the tile into the smaller side divided by 1.75, and that margin is
+          what the halo and the lift shadow are drawn into.
+        */}
+        <div
+          className="relative grid place-items-center"
+          style={{
+            width: `min(82vw, ${LOGO_REVEAL.tileSize * 1.75}px)`,
+            height: `min(82vw, ${LOGO_REVEAL.tileSize * 1.75}px)`,
+          }}
+        >
+          {glass && (
+            <motion.div
+              className="absolute inset-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: ready ? 1 : 0 }}
+              transition={{ duration: 0.4, ease: EASE }}
+            >
+              <GlassIconReveal
+                logo={LOGO_REVEAL.logoSrc}
+                label={intro.logoAlt}
+                look="dark"
+                className="h-full w-full"
+                background={LOGO_REVEAL.background}
+                logoColor={LOGO_REVEAL.logoColor}
+                /*
+                  No plate: the glass sits on the void and lets go of the mark,
+                  rather than settling into an app icon. The upstream dark preset
+                  turns the plate on, which is the one thing about it that does
+                  not suit a page whose whole opening is the logo alone.
+                */
+                iconPlate={false}
+                keepPlate={false}
+                tileSize={LOGO_REVEAL.tileSize}
+                logoScale={LOGO_REVEAL.logoScale}
+                finalScale={LOGO_REVEAL.finalScale}
+                texSize={LOGO_REVEAL.texSize}
+                spectralSamples={LOGO_REVEAL.spectralSamples}
+                dprMax={LOGO_REVEAL.dprMax}
+                tuning={{
+                  present: LOGO_REVEAL.present,
+                  glide: LOGO_REVEAL.glide,
+                  startZoom: LOGO_REVEAL.startZoom,
+                }}
+                onReady={handleReady}
+                replayOnClick
+              />
+            </motion.div>
+          )}
+
+          {/*
+            The still logo. It is the reduced motion path, the no-WebGL2 path and
+            the slow-machine path, so it stays mounted and is only faded out once
+            there is a reveal to hand over to.
+          */}
+          <motion.div
+            className="absolute inset-0 grid place-items-center"
+            initial={{ opacity: glass ? 0 : 1 }}
+            animate={{ opacity: stillVisible ? 1 : 0 }}
+            transition={{ duration: 0.4, ease: EASE }}
+            style={{ pointerEvents: "none" }}
+          >
+            <Image
+              src={intro.logoSrc}
+              alt={glass ? "" : intro.logoAlt}
+              aria-hidden={glass ? true : undefined}
+              width={intro.logoWidth}
+              height={intro.logoHeight}
+              priority
+              sizes="(max-width: 640px) 64vw, 26rem"
+              className="h-auto w-[clamp(12rem,42vw,22rem)] select-none"
+            />
+          </motion.div>
+        </div>
       </motion.div>
     </motion.div>
   );
