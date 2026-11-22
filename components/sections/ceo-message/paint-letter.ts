@@ -134,13 +134,18 @@ function seal(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, 
  * CSS custom property, which is the same trap the liquid headlines on this page
  * hit, so the caller reads them off a probe element first.
  */
-export function paintLetter(fonts: LetterFonts): HTMLCanvasElement {
+export function paintLetter(fonts: LetterFonts, scale = 1): HTMLCanvasElement {
   const { texW: W, texH: H, pad } = SHEET;
   const canvas = document.createElement("canvas");
-  canvas.width = W;
-  canvas.height = H;
+  // Supersampling is applied to the backing store and then to the context, so
+  // every coordinate, font size and padding below still reads in the 1280 by
+  // 1810 space the letter was laid out in. Scaling the numbers instead would
+  // have meant re-tuning the whole sheet for one texture change.
+  canvas.width = Math.round(W * scale);
+  canvas.height = Math.round(H * scale);
   const ctx = canvas.getContext("2d");
   if (!ctx) return canvas;
+  if (scale !== 1) ctx.scale(scale, scale);
 
   // ── Stock ───────────────────────────────────────────────────────────────
   const stock = ctx.createLinearGradient(0, 0, W * 0.75, H);

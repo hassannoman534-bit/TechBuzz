@@ -40,6 +40,11 @@ export type BeliefLetterContent = {
   heading: string;
   cue: string;
   cueTouch: string;
+  /** Shown under the sheet once the reader is open. */
+  cueRead: string;
+  /** Accessible name of the control that opens and closes the reader. */
+  openLabel: string;
+  closeLabel: string;
   /** Read out in place of the sheet, which is a picture as far as a reader is concerned. */
   ariaLabel: string;
 };
@@ -60,8 +65,11 @@ export const beliefLetter: BeliefLetterContent = {
   monogram: "TB",
   eyebrow: "Signed",
   heading: "The letter itself",
-  cue: "Drag to lift the page",
+  cue: "Click to read it, drag to lift it",
   cueTouch: "Swipe the page",
+  cueRead: "Scroll to read, Esc to close",
+  openLabel: "Read the letter close up",
+  closeLabel: "Close the letter",
   ariaLabel:
     "A letter on TechBuzz paper, titled Our belief, signed by Muhammad Usman in Lahore. The text is repeated below the sheet.",
 };

@@ -5,7 +5,20 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { MotionValue } from "framer-motion";
 import * as THREE from "three";
 import { LETTER_MOTION, SHEET } from "./belief-letter.config";
+import { READER } from "./letter-reader.config";
 import { paintLetter, type LetterFonts } from "./paint-letter";
+
+/** The sheet's resting frame on screen, in CSS px relative to the canvas. */
+export type RestFrame = { h: number; cx: number; cy: number };
+
+const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+/** Hermite ramp between two edges. Zero below `a`, one above `b`, eased between. */
+function smoothstep(a: number, b: number, v: number): number {
+  if (b <= a) return v < a ? 0 : 1;
+  const t = clamp01((v - a) / (b - a));
+  return t * t * (3 - 2 * t);
+}
 
 /**
  * The sheet: one mesh, one texture, one draw call.
@@ -132,6 +145,17 @@ type SheetProps = {
   /** Section scroll progress, read in the frame loop so it never re renders. */
   progress: MotionValue<number>;
   pointer: React.RefObject<{ x: number; y: number; active: boolean; hover: boolean }>;
+  /**
+   * Where the sheet sits when it is not being read. Measured from a placeholder
+   * in the stage's own layout and refreshed on resize, never in the frame loop:
+   * reading a rect per frame would force a layout at the exact moment the loop
+   * is about to write transforms.
+   */
+  rest: React.RefObject<RestFrame | null>;
+  /** 0 at rest, 1 fully in the reader. Driven by a spring outside React. */
+  focus: MotionValue<number>;
+  /** 0 on the first line, 1 on the last. The runway's scroll progress. */
+  read: MotionValue<number>;
 };
 
 /**
@@ -152,14 +176,14 @@ type Uniforms = {
   uStock: { value: THREE.Color };
 };
 
-function Sheet({ fonts, progress, pointer }: SheetProps): React.ReactElement {
+function Sheet({ fonts, progress, pointer, rest, focus, read }: SheetProps): React.ReactElement {
   const mesh = useRef<THREE.Mesh>(null);
-  const { gl, viewport } = useThree();
+  const { gl, viewport, size } = useThree();
 
   // Painted once. The texture is the expensive part of this component and it
   // never changes, so it is built on mount and disposed on unmount.
   const texture = useMemo(() => {
-    const tex = new THREE.CanvasTexture(paintLetter(fonts));
+    const tex = new THREE.CanvasTexture(paintLetter(fonts, READER.texScale));
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.generateMipmaps = true;
     tex.minFilter = THREE.LinearMipmapLinearFilter;
@@ -227,20 +251,93 @@ function Sheet({ fonts, progress, pointer }: SheetProps): React.ReactElement {
     const sp = progress.get();
     const centred = (sp - 0.5) * 2;
 
-    m.rotation.x = rot.current.x + centred * LETTER_MOTION.scrollTurn * 0.35;
-    m.rotation.y = rot.current.y + centred * LETTER_MOTION.scrollTurn;
-    m.position.y = -centred * LETTER_MOTION.scrollRiseVh * viewport.height * 0.5;
+    /*
+      Framing.
 
-    const wantLift = p?.hover ? LETTER_MOTION.hoverLift : 0;
+      The canvas covers the whole pinned stage rather than the small portrait
+      box the sheet used to live in, so where the sheet appears and how big it
+      is are decided here instead of by CSS. That is deliberate: animating the
+      box itself would resize the drawing buffer on every frame of the zoom,
+      and scaling the canvas element with a CSS transform would stretch already
+      rasterised pixels and soften the type. Moving the mesh inside a canvas
+      that never changes size costs nothing and stays crisp at any scale.
+
+      `wpp` is world units per CSS pixel on the plane the sheet sits on, which
+      is what lets a world-space mesh be lined up with a DOM rect exactly.
+    */
+    const wpp = viewport.height / size.height;
+
+    const box = rest.current;
+    const restH = box ? box.h : size.height * 0.56;
+    const restScale = (restH * wpp) / SHEET.worldH;
+    const restX = box ? (box.cx - size.width * 0.5) * wpp : 0;
+    const restY = box ? (size.height * 0.5 - box.cy) * wpp : 0;
+
+    // The reading frame: as tall as fillH asks for, capped by the width the
+    // stage can show, so the sheet's edges can never be clipped by it.
+    const widthCap = READER.maxW * size.width * (SHEET.worldH / SHEET.worldW);
+    const readH = Math.min(READER.fillH * size.height, widthCap);
+    const readScale = (readH * wpp) / SHEET.worldH;
+    // Half the sheet's overhang, plus a margin past the first and last line.
+    const pan = Math.max(0, (readH - size.height) * 0.5 + READER.padH * size.height) * wpp;
+
+    const r = clamp01(read.get());
+    /*
+      Reading progress, normalised over the part of the runway that is actually
+      spent reading. The last stretch is the return, so mapping the travel over
+      the whole runway left the foot of the sheet permanently out of reach: the
+      signature was still 65px below the stage when the sheet started coming
+      home. Normalising here means the last line lands exactly as the return
+      begins.
+    */
+    const rr = READER.returnFrom > 0 ? clamp01(r / READER.returnFrom) : r;
+    /*
+      Focus tapers to zero over the last stretch of the runway. The sheet is
+      therefore already back in its resting frame by the time the section
+      unpins, so the hand off to the next section has nothing left to animate
+      and never jumps. This is also what makes the whole read reversible: f and
+      r are both pure functions of scroll position and a spring, so scrolling
+      backwards runs the animation backwards with no state to unwind.
+    */
+    const f = clamp01(focus.get()) * (1 - smoothstep(READER.returnFrom, 1, r));
+    const hold = 1 - f;
+
+    m.scale.setScalar(restScale + (readScale - restScale) * f);
+    m.position.x = restX * hold;
+    /*
+      Reading travel. At r = 0 the sheet is pushed down so its first line is at
+      the top of the stage; at r = 1 it has risen by its whole overhang and the
+      signature is at the bottom. Scrolling up lowers r, which sends the sheet
+      back down, which is the direction paper would move if it were being slid
+      under the eye.
+    */
+    m.position.y =
+      (restY - centred * LETTER_MOTION.scrollRiseVh * viewport.height * 0.5) * hold +
+      (2 * rr - 1) * pan * f;
+
+    // Square to the eye while reading. A letter being read is not held at an
+    // angle, and the resting tilt costs real legibility at the top and bottom
+    // of the sheet once it is this large.
+    m.rotation.x = (rot.current.x + centred * LETTER_MOTION.scrollTurn * 0.35) * hold;
+    m.rotation.y = (rot.current.y + centred * LETTER_MOTION.scrollTurn) * hold;
+
+    const wantLift = p?.hover && f < 0.5 ? LETTER_MOTION.hoverLift : 0;
     lift.current += (wantLift - lift.current) * Math.min(1, dt * 7);
-    m.position.z = lift.current;
+    m.position.z = lift.current * hold;
 
     // Paper bends as it is lifted: curl tracks the turn away from rest.
     const turn = Math.abs(rot.current.y - LETTER_MOTION.restY) + Math.abs(rot.current.x - LETTER_MOTION.restX);
-    uniforms.uCurl.value = turn * LETTER_MOTION.curlFromTurn;
+    uniforms.uCurl.value = turn * LETTER_MOTION.curlFromTurn * hold;
     uniforms.uTime.value = state.clock.elapsedTime;
+    /*
+      The idle wave is displacement in object space, so the mesh scale
+      multiplies it: left alone, the sheet would ripple two and a half times
+      harder in the reader than at rest and read as a flag rather than paper.
+      Damping it keeps the surface alive without moving the lines being read.
+    */
+    uniforms.uIdle.value = LETTER_MOTION.idleAmp * (1 - READER.idleDamp * f);
     uniforms.uSheenStrength.value =
-      LETTER_MOTION.sheenStrength * (1 + (p?.hover ? LETTER_MOTION.hoverSheen : 0));
+      LETTER_MOTION.sheenStrength * (1 + (p?.hover ? LETTER_MOTION.hoverSheen : 0) * hold);
   });
 
   return (
@@ -260,6 +357,9 @@ export type LetterSheetProps = {
   fonts: LetterFonts;
   progress: MotionValue<number>;
   pointer: React.RefObject<{ x: number; y: number; active: boolean; hover: boolean }>;
+  rest: React.RefObject<RestFrame | null>;
+  focus: MotionValue<number>;
+  read: MotionValue<number>;
   /** True only while the sheet is actually on screen. Drives the render loop. */
   onScreen: boolean;
   onLost?: () => void;
@@ -273,6 +373,9 @@ export function LetterSheet({
   fonts,
   progress,
   pointer,
+  rest,
+  focus,
+  read,
   onScreen,
   onLost,
 }: LetterSheetProps): React.ReactElement {
@@ -309,18 +412,30 @@ export function LetterSheet({
           on a page that has already had to be trimmed to two of them.
         */
         frameloop={onScreen ? "always" : "never"}
-        // Two is the point past which the extra samples are not visible on this
-        // kind of surface, and the texture is already oversampled.
-        dpr={[1, 2]}
+        // See READER.dprMax: the canvas covers the stage now, not a 420px box,
+        // so the old ceiling of 2 bought grain nobody can see at four times the
+        // fragments on a retina screen.
+        dpr={[1, READER.dprMax]}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-        // 3.0 puts the sheet at about 82% of the frame height. 3.35 left it at
-        // 74% and the letter read as a small card floating in a large dark box.
-        // Closer than this and a corner clips when the sheet is turned to its
-        // limit, because the near edge gains about 13% from the perspective.
+        /*
+          The camera no longer frames the sheet; the frame loop does, by scaling
+          the mesh to whatever rect it has been asked to fill. What this
+          distance still decides is how strong the perspective is, so it stays
+          at 3.0: the sheet foreshortens exactly as it did before when it is
+          turned, and a corner still cannot clip, because the sheet is sized in
+          CSS pixels and capped against the stage rather than filling the frame.
+        */
         camera={{ fov: 32, position: [0, 0, 3.0], near: 0.1, far: 20 }}
         style={{ touchAction: "pan-y" }}
       >
-        <Sheet fonts={fonts} progress={progress} pointer={pointer} />
+        <Sheet
+          fonts={fonts}
+          progress={progress}
+          pointer={pointer}
+          rest={rest}
+          focus={focus}
+          read={read}
+        />
       </Canvas>
     </div>
   );
