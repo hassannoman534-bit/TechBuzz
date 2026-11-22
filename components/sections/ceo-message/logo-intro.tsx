@@ -189,6 +189,11 @@ export function LogoIntro({ onDone }: LogoIntroProps): React.ReactElement {
                   present: LOGO_REVEAL.present,
                   glide: LOGO_REVEAL.glide,
                   startZoom: LOGO_REVEAL.startZoom,
+                  halo: LOGO_REVEAL.halo,
+                  shadow: LOGO_REVEAL.shadow,
+                  bevelWidth: LOGO_REVEAL.bevelWidth,
+                  specular: LOGO_REVEAL.specular,
+                  ripple: LOGO_REVEAL.ripple,
                 }}
                 onReady={handleReady}
                 replayOnClick

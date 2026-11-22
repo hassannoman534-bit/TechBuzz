@@ -66,6 +66,30 @@ export const LOGO_REVEAL = {
    */
   present: 1.15,
   glide: 1.1,
+
+  /*
+    Softening the tile's outer boundary.
+
+    The upstream dark preset was built to sit on pure black as an app icon, and
+    it is drawn to read as a distinct object: a bluish halo outside the rim, a
+    wide bevel band, and a full strength specular. On this page that combination
+    outlines a rounded rectangle on the void, and because the mark inside it is
+    a wide wordmark rather than a square glyph, what the eye reads is a logo
+    sitting in a container rather than a mark held in glass.
+
+    So: no halo and no lift shadow, which are the two things that draw anything
+    at all outside the tile; a bevel narrowed back to the light preset's width,
+    so the rim is a hairline instead of a band; and the specular pulled down so
+    that hairline glints rather than glows. The glass still refracts the mark
+    exactly as before, which is the part worth keeping. Raise `halo` back toward
+    1 if it now reads as too flat.
+  */
+  halo: 0,
+  shadow: 0,
+  bevelWidth: 0.14,
+  specular: 0.55,
+  /** The landing ring. Kept faint: it is the one other thing drawn on the void. */
+  ripple: 0.25,
   /**
    * How far the droplet magnifies the mark before it glides out. The upstream
    * dark preset uses 1.6; a wordmark's thin strokes smear at that, so this is

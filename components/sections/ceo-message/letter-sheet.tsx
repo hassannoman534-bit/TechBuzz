@@ -312,7 +312,7 @@ function Sheet({ fonts, progress, pointer, rest, focus, read }: SheetProps): Rea
       under the eye.
     */
     m.position.y =
-      (restY - centred * LETTER_MOTION.scrollRiseVh * viewport.height * 0.5) * hold +
+      (restY - centred * LETTER_MOTION.scrollRiseVh * READER.riseDamp * viewport.height * 0.5) * hold +
       (2 * rr - 1) * pan * f;
 
     // Square to the eye while reading. A letter being read is not held at an

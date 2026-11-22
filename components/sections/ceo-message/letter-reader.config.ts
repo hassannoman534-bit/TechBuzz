@@ -69,13 +69,20 @@ export const READER = {
    * Enter and exit springs for the zoom.
    *
    * Apple's duration and bounce form rather than stiffness and damping: it is
-   * the one that can be reasoned about. Bounce stays near zero because paper
-   * does not overshoot, and the exit is quicker than the entrance on purpose.
-   * Opening is the reader deciding; closing is the interface answering, and an
-   * answer that takes as long as the decision feels slow.
+   * the one that can be reasoned about. Bounce is zero in both directions:
+   * paper does not overshoot, and at this duration any bounce at all reads as
+   * a wobble rather than weight.
+   *
+   * Both are long on purpose. The usual rule would make the exit much quicker
+   * than the entrance, because a UI control closing is the interface answering
+   * and should feel immediate. This is not a control, it is the page changing
+   * what it is showing, and the first pass at 0.52 in and 0.34 out snapped hard
+   * enough that the sheet appeared to jump rather than travel. These are paced
+   * to the page's own scrolling instead, so the zoom glides at roughly the rate
+   * Lenis settles a scroll and the two read as one movement.
    */
-  enter: { duration: 0.52, bounce: 0.06 },
-  exit: { duration: 0.34, bounce: 0 },
+  enter: { duration: 1.05, bounce: 0 },
+  exit: { duration: 0.9, bounce: 0 },
 
   /**
    * Read progress at which the sheet starts travelling back to its resting
@@ -93,10 +100,13 @@ export const READER = {
    */
   clickSlopPx: 6,
 
-  /** Lenis duration for the scroll that pins the stage, in seconds. */
-  pinScrollS: 0.7,
-  /** Lenis duration for the scroll that re-centres the sheet on manual close. */
-  closeScrollS: 0.45,
+  /**
+   * Lenis durations, seconds. Matched to the springs above so the page's travel
+   * and the sheet's travel finish together instead of one landing early.
+   */
+  pinScrollS: 1.1,
+  /** The scroll that re-centres the sheet on a manual close. */
+  closeScrollS: 0.95,
 
   /**
    * Supersampling for the letter's texture, on top of SHEET.texW and texH.
@@ -126,4 +136,16 @@ export const READER = {
 
   /** Idle breathing is damped while reading. Paper held up close is held still. */
   idleDamp: 0.85,
+
+  /**
+   * Damping on the sheet's scroll rise.
+   *
+   * The rise was tuned when the canvas was clipped to the sheet's own box and
+   * could not show the sheet leaving it. The stage canvas can, so at full
+   * strength the sheet travels about 29px past the foot of its slot and reaches
+   * the cue on a short window. The pin also keeps the sheet on screen far
+   * longer than before, which makes a large drift read as wander rather than
+   * life. 0.65 keeps the movement and returns the clearance.
+   */
+  riseDamp: 0.65,
 } as const;

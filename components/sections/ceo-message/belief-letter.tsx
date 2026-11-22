@@ -118,6 +118,20 @@ export function BeliefLetter(): React.ReactElement {
   const [runway, setRunway] = useState(false);
   const focus = useMotionValue(0);
 
+  /*
+    Motion values are only put into `style` after mount.
+
+    The server cannot resolve a motion value, so an element whose opacity comes
+    from one renders a plain number on the server and a live value on the first
+    client render, and React reports the pair as a hydration mismatch and gives
+    up on patching that subtree. Before mount every style below is the same
+    plain number the server wrote; after mount the values take over. The reader
+    cannot be open before mount, so none of these is ever anything but its
+    resting value at the moment of the swap.
+  */
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   // The pointer handlers are created once and read state through a ref, so
   // turning the sheet never rebuilds them.
   const readingRef = useRef(false);
@@ -349,7 +363,11 @@ export function BeliefLetter(): React.ReactElement {
         className={cn(
           "relative w-full overflow-hidden px-[clamp(1.25rem,5vw,5.5rem)]",
           pinned
-            ? "sticky top-0 flex flex-col items-center justify-center"
+            ? // The top padding is clearance for the floating navbar. The stage
+              // is pinned to the top of the viewport now, so the heading sits
+              // under the navbar pill for the whole pin unless the column is
+              // centred in the space below it rather than in the whole stage.
+              "sticky top-0 flex flex-col items-center justify-center pb-[clamp(3.5rem,9vh,6rem)] pt-[clamp(5rem,11vh,7.5rem)]"
             : "pb-[clamp(2rem,5vh,4rem)] pt-[clamp(1.5rem,4.5vh,3.5rem)]",
         )}
         style={pinned ? { height: "100svh" } : undefined}
@@ -385,7 +403,7 @@ export function BeliefLetter(): React.ReactElement {
         <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center text-center">
           <motion.div
             className="flex w-full flex-col items-center"
-            style={{ opacity: chrome }}
+            style={{ opacity: mounted ? chrome : 1 }}
           >
             <motion.span
               className="font-footer-text block text-[0.68rem] uppercase tracking-[0.3em] text-white/40"
@@ -431,7 +449,7 @@ export function BeliefLetter(): React.ReactElement {
               aria-hidden
               className="pointer-events-none absolute inset-0 -z-10"
               style={{
-                opacity: reduce ? 0.4 : glow,
+                opacity: reduce ? 0.4 : mounted ? glow : 0.25,
                 background:
                   "radial-gradient(60% 50% at 50% 52%, rgba(201,163,74,0.2), rgba(123,97,255,0.08) 45%, rgba(3,7,18,0) 72%)",
                 filter: "blur(18px)",
@@ -478,10 +496,18 @@ export function BeliefLetter(): React.ReactElement {
             first draft fell back to the place name here, which is already
             printed on the sheet itself two lines above.
           */}
-          {live && (
+          {/*
+            On the pinned path the cue is not in this column. The sheet is drawn
+            by a canvas that covers the whole stage rather than by this box, so
+            the scroll rise can carry it about 29px past the bottom of its slot,
+            which is further than the cue's margin and put the two on top of
+            each other. Out of flow and pinned to the foot of the stage, it
+            cannot be reached whatever the sheet does. The static path keeps it
+            here, where there is no canvas and no rise.
+          */}
+          {live && !pinned && (
             <motion.span
               className="font-footer-text mt-[clamp(1rem,2.5vh,1.6rem)] block text-[0.66rem] uppercase tracking-[0.26em] text-white/35"
-              style={{ opacity: chrome }}
               {...rise(0.3)}
             >
               {fine ? beliefLetter.cue : beliefLetter.cueTouch}
@@ -521,14 +547,32 @@ export function BeliefLetter(): React.ReactElement {
           />
         )}
 
+        {/*
+          Both cues share one slot at the foot of the stage and cross-fade, so
+          they can never print over one another either.
+        */}
         {pinned && (
-          <motion.span
+          <div
             aria-hidden
-            className="font-footer-text pointer-events-none absolute inset-x-0 bottom-[clamp(1rem,4vh,2.5rem)] z-30 block text-center text-[0.66rem] uppercase tracking-[0.26em] text-white/35"
-            style={{ opacity: readCue }}
+            className="pointer-events-none absolute inset-x-0 bottom-[clamp(1rem,3.5vh,2.25rem)] z-30 grid place-items-center"
           >
-            {beliefLetter.cueRead}
-          </motion.span>
+            <motion.span
+              className="font-footer-text col-start-1 row-start-1 block text-center text-[0.66rem] uppercase tracking-[0.26em] text-white/35"
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : { opacity: 0 }}
+              transition={reduce ? { duration: 0.01 } : { duration: 0.8, ease: EASE, delay: 0.3 }}
+            >
+              <motion.span className="block" style={{ opacity: mounted ? chrome : 1 }}>
+                {fine ? beliefLetter.cue : beliefLetter.cueTouch}
+              </motion.span>
+            </motion.span>
+            <motion.span
+              className="font-footer-text col-start-1 row-start-1 block text-center text-[0.66rem] uppercase tracking-[0.26em] text-white/35"
+              style={{ opacity: mounted ? readCue : 0 }}
+            >
+              {beliefLetter.cueRead}
+            </motion.span>
+          </div>
         )}
 
         {/* Hairline close, matching the rest of the page's section joins. */}
@@ -544,7 +588,7 @@ export function BeliefLetter(): React.ReactElement {
             background: `linear-gradient(90deg, rgba(3,7,18,0), ${PAPER.goldSoft}55, rgba(3,7,18,0))`,
             // `chrome` is 1 whenever the reader is shut, and the reader can only
             // open on the pinned path, so this needs no branch of its own.
-            opacity: chrome,
+            opacity: mounted ? chrome : 1,
           }}
         />
       </div>

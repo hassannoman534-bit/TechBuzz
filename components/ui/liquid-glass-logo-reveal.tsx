@@ -697,7 +697,21 @@ void main() {
   }
 
   vec3 outc = mix(plain, col, uPlateAlpha);
-  outc += (hash(gl_FragCoord.xy) - 0.5) / 255.0;
+  /*
+    Dither, but only where there is a gradient to band.
+
+    Upstream applies it to every fragment. On a pale backdrop that is invisible;
+    on this page's near black void it is not. The canvas sits on a page painted
+    the same colour in CSS, so a flat fill matches it exactly and disappears,
+    while one carrying half a bit of noise everywhere draws its own rectangle on
+    the page: the "black box" the logo appeared to be sitting in was the canvas
+    itself, outlined by its own grain.
+
+    The falloff is smooth and reaches past the ripple, so the grain has no edge
+    of its own either, and beyond it the canvas is bit exact uBg.
+  */
+  float grain = uPlateAlpha * (1.0 - smoothstep(0.0, 0.8 * uPlateScale, sd));
+  outc += (hash(gl_FragCoord.xy) - 0.5) / 255.0 * grain;
   outColor = vec4(outc, 1.0);
 }`;
 
