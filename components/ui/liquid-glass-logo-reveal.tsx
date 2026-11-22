@@ -103,7 +103,12 @@ interface GlassTuning {
   /** Soft band of light that crosses the glass while it holds the logo (0 = none) */
   sheen: number;
   /** How far the light turns round the rim while the glass holds, radians */
-  lightTurn: number;
+  lightTurn: number
+  /**
+   * Plate units over which the tile's own shading fades out at its rim, so the
+   * glass has no visible boundary. 0 is upstream behaviour: a hard edged pane.
+   */
+  edgeMelt: number;
 }
 
 interface Settings extends GlassTuning {
@@ -126,7 +131,7 @@ const LIGHT: Settings = {
   cornerPull: 2.1, cornerWidth: 2.2, cornerFocus: 0.58, edgeSmear: 2.85, stretch: 0, tilt: 0.35, bulge: 1,
   specular: 1, halo: 0, shadow: 1, ripple: 1,
   bounce: 0, response: 0.42, startSize: 0.2, startZoom: 2.6, glide: 2.3, present: 2.4, drift: 0.12, swell: 0.5, focus: 1,
-  sheen: 1, lightTurn: 0.9,
+  sheen: 1, lightTurn: 0.9, edgeMelt: 0,
   hold: 1, background: "#e9e9eb", plateColor: "#ffffff", logoColor: "#0e1428",
 };
 
@@ -463,6 +468,7 @@ uniform float uDissolve;   // 0 → 1 as the glass lets go of the logo
 uniform float uGlow;       // colour bleed in the rim, plate units on screen
 uniform float uFaceDisp;   // lateral colour across the face
 uniform float uVivid;      // chroma lift of the dispersed light
+uniform float uEdgeMelt;   // plate units over which the tile's own shading fades out at the rim
 
 uniform float uDisp;
 uniform float uDouble;
@@ -654,8 +660,34 @@ void main() {
     float hazeGate = mix(1.0 - smoothstep(0.25, 0.75, hazeLum), smoothstep(0.25, 0.75, hazeLum), uLightGlass);
     trans = mix(trans, liftG, uFrost * 0.45 * hazeGate);
 
+    /*
+      Edge melt.
+
+      Everything that *draws* the tile as an object, the Fresnel darkening, the
+      rim light, the specular and the sheen, is faded out toward the rim, while
+      the refraction itself is left untouched. The result is a lens rather than
+      a pane: the mark is still bent and split into colour exactly as before,
+      but the glass has no detectable boundary, so the logo stops reading as
+      something sitting inside a container.
+
+      Measured rather than guessed, because the obvious suspect was wrong. The
+      Fresnel darkening looked like the culprit and contributes almost nothing
+      here. What draws the box is the rim light: evaluated along the radius at
+      the hold frame it peaks at +64/255 at the very edge, and the page behind
+      it is rgb(3,7,18), so the tile is outlined by a band roughly twenty times
+      brighter than its surroundings. Dropping the halo removed the glow outside
+      the rim and left that untouched, which is why the box survived it. With
+      the melt the same peak measures +1/255.
+
+      uEdgeMelt is scaled by the droplet's spread on the way in, so the droplet
+      keeps its crisp bubble edge and only the spread tile melts.
+    */
+    float melt = uEdgeMelt > 0.0
+      ? smoothstep(0.0, 1.0, clamp(s / max(uEdgeMelt * uPlateScale, 1e-5), 0.0, 1.0))
+      : 1.0;
+
     float glassAmt = pow(1.0 - uDissolve, 1.5);
-    float lit = uSpec * glassAmt;
+    float lit = uSpec * glassAmt * melt;
     vec3 rimCol = mix(vec3(0.80, 0.87, 0.97), vec3(1.0), uLightGlass);
 
     // Light backdrop: the thick edge glows softly white over a clear face, with a hairline that is
@@ -669,7 +701,7 @@ void main() {
     float glow = mix(0.32 * tileBand, 0.75 * dropBand, uDrop) * lightOnly;
     float edgeLine = gauss(s, 0.005 * sc, 0.0045 * sc);
     float lip = gauss(s, 0.15 * sc, 0.007 * sc) * uDouble * (1.0 - uDrop);
-    vec3 lightGlass = mix(trans, vec3(1.0), glow * glassAmt);
+    vec3 lightGlass = mix(trans, vec3(1.0), glow * glassAmt * melt);
     lightGlass += (0.075 * hw * edgeLine + 0.06 * (0.4 + 0.6 * hw) * lip) * lit;
     lightGlass *= 1.0 - 0.05 * (1.0 - hw) * edgeLine * glassAmt * (1.0 - uDrop);
     lightGlass = mix(lightGlass, vec3(1.0), 0.55 * uDrop * glassAmt * edgeLine);
@@ -683,14 +715,14 @@ void main() {
     vec3 rim = rimCol * fres * (0.35 + 0.65 * max(side, -side * 0.8)) * uRim * 0.65;
     vec3 Hv = normalize(normalize(vec3(-0.45, 0.6, 0.66)) + vec3(0.0, 0.0, 1.0));
     float spc = pow(max(dot(Nl, Hv), 0.0), 140.0) * 0.8 * smoothstep(0.0, 0.25, y1);
-    vec3 darkGlass = trans * (1.0 - 0.25 * fres) + (rim + vec3(spc)) * lit;
+    vec3 darkGlass = trans * (1.0 - 0.25 * fres * melt) + (rim + vec3(spc)) * lit;
     darkGlass = mix(darkGlass, rimCol, uDrop * 0.4 * uSpec * (1.0 - smoothstep(0.0, 0.1 * uPlateScale, s)));
     vec3 glass = mix(darkGlass, lightGlass, uLightGlass);
 
     // While the glass holds the logo a soft band of light crosses the face, brightest near the rim.
     float sweepD = dot(p / uPlateScale, normalize(vec2(0.8, 0.6))) - uSweep;
     float sheen = uSheen * glassAmt * exp(-sweepD * sweepD / 0.03) * (0.55 + 0.45 * (1.0 - x));
-    glass = mix(glass, vec3(1.0), sheen * mix(0.22, 0.42, uLightGlass));
+    glass = mix(glass, vec3(1.0), sheen * mix(0.22, 0.42, uLightGlass) * melt);
 
     float cov = clamp(0.5 - sd / soft, 0.0, 1.0);
     col = mix(bg, glass, cov);
@@ -931,6 +963,7 @@ function frameAt(T: number, P: Settings, outro = 0) {
     uGlow: 0.012 * P.colorBleed,
     uFaceDisp: 0.012 * P.dispersion,
     uVivid: 0.85,
+    uEdgeMelt: P.edgeMelt * (1 - drop),
     uDissolve: release,
     uDisp: P.dispersion,
     uDouble: P.doubleBevel,

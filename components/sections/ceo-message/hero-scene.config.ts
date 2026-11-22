@@ -21,6 +21,20 @@
 export const PARALLAX = {
   /** Farthest. Barely moves, grows a touch, so the backdrop feels held. */
   environment: { y: -6, scale: 1.07 },
+  /**
+   * The lattice, which is what makes any of this visible.
+   *
+   * The scene had plenty of parallax and none of it could be seen, because
+   * every layer behind the word was a smooth gradient or a near black ridge.
+   * The eye cannot detect motion in a smooth gradient: there is nothing in it
+   * to track from one frame to the next. A regular lattice is the opposite,
+   * every dot is a reference point, so even a few per cent of differential
+   * travel against the word reads immediately as depth.
+   *
+   * Held almost still on purpose. The word travelling 17 against a lattice
+   * travelling 5 is a 12 point differential, which is the whole effect.
+   */
+  lattice: { y: -5, scale: 1.04 },
   /** The word sits deeper than the figure, so it travels less. */
   word: { y: -17, scale: 0.94 },
   /** Nearest. Largest travel and a slight gain, which sells the depth. */
@@ -147,12 +161,43 @@ export const HERO_WORD = {
  * carries a shader for the word and another for the sign off, and a backdrop
  * is exactly the kind of thing that should cost nothing.
  */
+/**
+ * The lattice: a regular field of points behind the word, and the only thing in
+ * the hero with enough structure to make the parallax legible.
+ *
+ * Pure CSS background images. Deliberately not a canvas: this page is already
+ * at the browser's budget for live WebGL contexts, and a sixth is what takes
+ * one away from the hero word.
+ */
+export const LATTICE = {
+  /** Cell size in px, and the dot within it. */
+  cell: 48,
+  dot: 1.1,
+  /** Two tones on the same grid, offset by half a cell, so it reads as a weave. */
+  primary: "rgba(170,186,255,0.22)",
+  secondary: "rgba(44,245,176,0.09)",
+  /**
+   * Where the field is allowed to show. Concentrated up and left of centre,
+   * where the word sits, and gone well before the figure on the right, the
+   * navbar above and the ridges below.
+   */
+  mask: "radial-gradient(66% 54% at 44% 40%, #000 0%, rgba(0,0,0,0.5) 56%, rgba(0,0,0,0) 84%)",
+} as const;
+
 export const ENVIRONMENT = {
-  /** Ambient pools. Brand violet left and high, tech blue right and lower. */
-  violet: "rgba(123,97,255,0.2)",
-  blue: "rgba(91,124,255,0.15)",
+  /*
+    Ambient pools. Brand violet left and high, tech blue right and lower.
+
+    Lifted from 0.2 and 0.15. The scene read as flat black with a man standing
+    in it, which left the lattice below with nothing to sit on and the whole
+    hero with no sense of a lit space. This is as far as it goes: the theme is
+    strictly dark and the page black stays #030712, so the room is lit rather
+    than the background lightened.
+  */
+  violet: "rgba(123,97,255,0.27)",
+  blue: "rgba(91,124,255,0.2)",
   /** Haze sitting along the ridgeline. */
-  haze: "rgba(123,97,255,0.09)",
+  haze: "rgba(123,97,255,0.12)",
   /**
    * Ridge fills, far to near. Each is a shade off the page black.
    *

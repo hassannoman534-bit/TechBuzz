@@ -51,9 +51,30 @@ export function LogoIntro({ onDone }: LogoIntroProps): React.ReactElement {
   const lenis = useLenis();
 
   const glass = LOGO_REVEAL.enabled && !reduce;
+  /*
+    The reveal's WebGL context is given up the moment the hold ends, rather than
+    when the overlay finishes fading out.
+
+    This page runs close to the browser's budget for live contexts: the navbar,
+    the hero word, the sign off surface and the letter sheet are all WebGL, and
+    the reveal is a fifth. Past the budget the browser takes one away without
+    warning, and a canvas whose context has been taken renders as the broken
+    image placeholder, which is the white box with a torn page icon that showed
+    up where the hero word should be.
+
+    By the time the hold is over the reveal has already finished and is showing
+    the bare mark, and the still logo below is the same mark at the same size,
+    so dropping the canvas here is invisible and hands the slot back half a
+    second before the hero word asks for one.
+  */
+  const [released, setReleased] = useState(false);
   const [ready, setReady] = useState(false);
   const [patienceGone, setPatienceGone] = useState(false);
   const handleReady = useCallback(() => setReady(true), []);
+  const finish = useCallback(() => {
+    setReleased(true);
+    onDone();
+  }, [onDone]);
 
   /*
     The hold. Two timers, and whichever fires first wins, because onDone only
@@ -66,18 +87,18 @@ export function LogoIntro({ onDone }: LogoIntroProps): React.ReactElement {
   */
   useEffect(() => {
     if (!glass) {
-      const id = window.setTimeout(onDone, reduce ? intro.reducedHoldMs : intro.holdMs);
+      const id = window.setTimeout(finish, reduce ? intro.reducedHoldMs : intro.holdMs);
       return () => window.clearTimeout(id);
     }
-    const ceiling = window.setTimeout(onDone, LOGO_REVEAL.maxHoldMs);
+    const ceiling = window.setTimeout(finish, LOGO_REVEAL.maxHoldMs);
     return () => window.clearTimeout(ceiling);
-  }, [glass, onDone, reduce]);
+  }, [finish, glass, reduce]);
 
   useEffect(() => {
     if (!glass || !ready) return;
-    const id = window.setTimeout(onDone, LOGO_REVEAL.holdMs);
+    const id = window.setTimeout(finish, LOGO_REVEAL.holdMs);
     return () => window.clearTimeout(id);
-  }, [glass, onDone, ready]);
+  }, [finish, glass, ready]);
 
   /** If the reveal is slow to arrive, show the still logo rather than nothing. */
   useEffect(() => {
@@ -104,7 +125,12 @@ export function LogoIntro({ onDone }: LogoIntroProps): React.ReactElement {
     };
   }, [lenis]);
 
-  const stillVisible = !glass || (patienceGone && !ready);
+  /*
+    The still logo covers three cases: reduced motion, no WebGL2, and a machine
+    too slow to have built the field yet. It also takes back over the moment the
+    canvas is released, where it is showing exactly what the reveal ended on.
+  */
+  const stillVisible = !glass || released || (patienceGone && !ready);
 
   return (
     <motion.div
@@ -157,7 +183,7 @@ export function LogoIntro({ onDone }: LogoIntroProps): React.ReactElement {
             height: `min(82vw, ${LOGO_REVEAL.tileSize * 1.75}px)`,
           }}
         >
-          {glass && (
+          {glass && !released && (
             <motion.div
               className="absolute inset-0"
               initial={{ opacity: 0 }}
@@ -194,6 +220,7 @@ export function LogoIntro({ onDone }: LogoIntroProps): React.ReactElement {
                   bevelWidth: LOGO_REVEAL.bevelWidth,
                   specular: LOGO_REVEAL.specular,
                   ripple: LOGO_REVEAL.ripple,
+                  edgeMelt: LOGO_REVEAL.edgeMelt,
                 }}
                 onReady={handleReady}
                 replayOnClick
@@ -221,7 +248,15 @@ export function LogoIntro({ onDone }: LogoIntroProps): React.ReactElement {
               height={intro.logoHeight}
               priority
               sizes="(max-width: 640px) 64vw, 26rem"
-              className="h-auto w-[clamp(12rem,42vw,22rem)] select-none"
+              className="h-auto select-none"
+              style={{
+                // On the glass path this has to be exactly what the reveal ends
+                // on, or the handover pops. The revealed mark is logoScale by
+                // finalScale of the tile; off that path the original clamp.
+                width: glass
+                  ? `min(82vw, ${LOGO_REVEAL.tileSize * LOGO_REVEAL.logoScale * LOGO_REVEAL.finalScale}px)`
+                  : "clamp(12rem, 42vw, 22rem)",
+              }}
             />
           </motion.div>
         </div>

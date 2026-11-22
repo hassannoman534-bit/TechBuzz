@@ -9,6 +9,7 @@ import { ceoMessage, EASE, LIQUID } from "./ceo-message.config";
 import { CeoFigure } from "./ceo-figure";
 import { CeoSignoff } from "./ceo-signoff";
 import { HeroEnvironment } from "./hero-environment";
+import { HeroLattice } from "./hero-lattice";
 import { HERO_WORD, PARALLAX } from "./hero-scene.config";
 import { LogoIntro } from "./logo-intro";
 import { PerspectiveMessage } from "./perspective-message";
@@ -123,6 +124,8 @@ export function CeoMessage(): React.ReactElement {
 
   const envY = useTransform(scrollYProgress, [0, 1], ["0%", pct(PARALLAX.environment.y)]);
   const envScale = useTransform(scrollYProgress, [0, 1], [1, PARALLAX.environment.scale]);
+  const latticeY = useTransform(scrollYProgress, [0, 1], ["0%", pct(PARALLAX.lattice.y)]);
+  const latticeScale = useTransform(scrollYProgress, [0, 1], [1, PARALLAX.lattice.scale]);
   const wordY = useTransform(scrollYProgress, [0, 1], ["0%", pct(PARALLAX.word.y)]);
   const wordScale = useTransform(scrollYProgress, [0, 1], [1, PARALLAX.word.scale]);
   const figY = useTransform(scrollYProgress, [0, 1], ["0%", pct(PARALLAX.figure.y)]);
@@ -158,6 +161,14 @@ export function CeoMessage(): React.ReactElement {
           style={layer(envY, envScale) as React.CSSProperties}
         >
           <HeroEnvironment />
+        </motion.div>
+
+        {/* ── Layer 1b, the lattice that makes all of the above legible ──── */}
+        <motion.div
+          className="absolute inset-0 z-0"
+          style={layer(latticeY, latticeScale) as React.CSSProperties}
+        >
+          <HeroLattice />
         </motion.div>
 
         {/* ── Layer 2, the word, plus the kicker that leads into it ─────── */}
@@ -199,6 +210,19 @@ export function CeoMessage(): React.ReactElement {
             </motion.p>
 
             {/*
+              The word's canvas is not created until the intro has handed over.
+
+              It used to be created on mount, which was survivable only because
+              the font variable it waits on took two to three seconds to resolve
+              and so it happened to land after the overlay had gone. Resolving
+              fonts properly removed that accident, and the word then asked for
+              a WebGL context at the same moment the intro's reveal was holding
+              one, on a page that already runs three. Past the browser's budget
+              one gets taken away without warning, and the loser rendered as the
+              broken image placeholder. Nothing is lost by waiting: the hero is
+              behind a full screen overlay until introDone, and the span below
+              already stands in until the canvas lands.
+
               Height is reserved. LiquidText sizes itself from the rasterised
               word, which only exists after mount, and this column is centred
               on the hero, so without a reservation the whole thing re centres
@@ -221,7 +245,7 @@ export function CeoMessage(): React.ReactElement {
               }}
               {...fade(0.12)}
             >
-              {family ? (
+              {family && introDone ? (
                 <LiquidText
                   text={heading.word}
                   ariaLabel={heading.srHeading}

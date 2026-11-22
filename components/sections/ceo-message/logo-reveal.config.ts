@@ -90,6 +90,21 @@ export const LOGO_REVEAL = {
   specular: 0.55,
   /** The landing ring. Kept faint: it is the one other thing drawn on the void. */
   ripple: 0.25,
+
+  /**
+   * How far the tile's own shading fades out at its rim, in plate units.
+   *
+   * This is the one that actually removes the container. Dropping the halo took
+   * away the glow outside the rim and the box survived it, because the box was
+   * never outside the rim: it is the rim light itself, which measures +64/255
+   * at the edge against a page at rgb(3,7,18). The melt takes that to +1/255.
+   *
+   * At 0.3 the shading is gone over the outer third of the tile's half width
+   * while the refraction carries on to the very edge, so the mark is still bent
+   * and split into colour and the glass itself has no boundary to find. Set it
+   * to 0 for the upstream hard edged pane.
+   */
+  edgeMelt: 0.3,
   /**
    * How far the droplet magnifies the mark before it glides out. The upstream
    * dark preset uses 1.6; a wordmark's thin strokes smear at that, so this is
