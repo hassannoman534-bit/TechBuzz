@@ -167,6 +167,23 @@ let categoriesOk = false;
   } else {
     line("GET /categories (browser UA)", FAIL, `HTTP ${t.value.status} in ${t.ms}ms`);
     note(FAIL, `/categories returned HTTP ${t.value.status}: ${t.value.text.replace(/\s+/g, " ")}`);
+    if (/imunify|bot.?protection/i.test(t.value.text)) {
+      note(
+        FAIL,
+        `That is Imunify360, the host's firewall, refusing THIS MACHINE'S IP address. It is not\n` +
+          `       WordPress, not the REST API and not the site's code: the same endpoint answers\n` +
+          `       normally from other addresses. A dev server is what usually triggers it, because\n` +
+          `       every hot reload re-requests the archive and this install ignores _fields, so each\n` +
+          `       call is over half a megabyte from one IP in a tight loop.\n\n` +
+          `       Fix it on the host:  cPanel, Security, Imunify360, Firewall, White List, and add\n` +
+          `                            this machine's public IP. Exempting /wp-json/ from bot\n` +
+          `                            protection works too.\n` +
+          `       Work around it now:  run \`node scripts/wp-snapshot.mjs\` from an unblocked network\n` +
+          `                            (a phone hotspot will do), then put WP_SNAPSHOT=prefer in\n` +
+          `                            .env.local. The dev server then stops calling WordPress, which\n` +
+          `                            is also what keeps the address from being banned again.`,
+      );
+    }
   }
 }
 

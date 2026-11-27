@@ -43,3 +43,6 @@ next-env.d.ts
 # local scripts
 fetch_techbuzz_assets
 techbuzz_portfolio_downloader
+
+# WordPress response snapshots for local development (scripts/wp-snapshot.mjs)
+.wp-cache/

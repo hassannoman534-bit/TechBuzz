@@ -27,6 +27,14 @@
 
 import { cacheLife } from "next/cache";
 
+import {
+  pickHeaders,
+  readSnapshot,
+  SNAPSHOT_MODE,
+  snapshotToResponse,
+  writeSnapshot,
+} from "./wp-snapshot";
+
 /** Override for staging or a CMS move. Production needs no env set. */
 const WP_BASE = process.env.WP_BASE_URL ?? "https://techbuzz.com.pk";
 const API = `${WP_BASE}/wp-json/wp/v2`;
@@ -310,6 +318,16 @@ async function get(path: string): Promise<Fetched> {
   const url = `${API}${path}`;
   let reason = "unknown";
 
+  /*
+    Development only, and off by default in production. See lib/wp-snapshot.ts
+    for why: this host bans by IP, and a dev server re-requesting half a
+    megabyte on every hot reload is what trains it to.
+  */
+  if (SNAPSHOT_MODE === "prefer") {
+    const snap = await readSnapshot(path);
+    if (snap) return { res: snapshotToResponse(snap) };
+  }
+
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const res = await fetch(url, {
@@ -317,7 +335,21 @@ async function get(path: string): Promise<Fetched> {
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
 
-      if (res.ok) return { res };
+      if (res.ok) {
+        if (SNAPSHOT_MODE === "off") return { res };
+        // Read once, keep a copy, hand the caller an identical response. The
+        // body of a Response can only be consumed one time, so it is rebuilt
+        // rather than cloned past this point.
+        const text = await res.text();
+        const headers = pickHeaders(res.headers);
+        await writeSnapshot(path, {
+          body: text,
+          headers,
+          capturedAt: new Date().toISOString(),
+          path,
+        });
+        return { res: new Response(text, { status: 200, headers }) };
+      }
 
       const body = await res.text().catch(() => "");
       reason = `HTTP ${res.status} ${res.statusText}${
@@ -333,9 +365,33 @@ async function get(path: string): Promise<Fetched> {
     if (attempt === 1) await new Promise((r) => setTimeout(r, 600));
   }
 
+  /*
+    Live WordPress is unreachable. In development, fall back to the last good
+    capture rather than emptying the page, so a firewall block stops being a
+    thing that blocks work.
+  */
+  if (SNAPSHOT_MODE !== "off") {
+    const snap = await readSnapshot(path);
+    if (snap) {
+      console.warn(
+        `[wp] ${reason}\n     serving the snapshot captured ${snap.capturedAt} for ${path}\n` +
+          `     set WP_SNAPSHOT=prefer to stop calling WordPress in development altogether.`,
+      );
+      return { res: snapshotToResponse(snap) };
+    }
+  }
+
+  const banned = /imunify|bot-protection|bot protection/i.test(reason);
   console.error(
     `[wp] request failed\n     url:    ${url}\n     reason: ${reason}\n` +
-      `     hint:   run \`node scripts/wp-doctor.mjs\` to find out which layer is refusing.`,
+      (banned
+        ? `     cause:  this is the host's firewall refusing this machine's IP address, not\n` +
+          `             WordPress and not this code. The API answers normally from elsewhere.\n` +
+          `     fix:    whitelist this IP in Imunify360 (cPanel, Security, Imunify360, then\n` +
+          `             Firewall, White List), or exempt /wp-json/ from bot protection.\n` +
+          `     meanwhile: run \`node scripts/wp-snapshot.mjs\` once from an unblocked\n` +
+          `             network, then develop with WP_SNAPSHOT=prefer.`
+        : `     hint:   run \`node scripts/wp-doctor.mjs\` to find out which layer is refusing.`),
   );
   return { res: null, reason };
 }
