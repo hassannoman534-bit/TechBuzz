@@ -48,6 +48,9 @@ const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 /** 0 below a, 1 above b, linear between. */
 const seg = (p: number, a: number, b: number): number => clamp01((p - a) / (b - a));
 const easeSine = (t: number): number => 0.5 - 0.5 * Math.cos(Math.PI * t);
+const easeOut = (t: number): number => 1 - Math.pow(1 - t, 3);
+const easeInOut = (t: number): number =>
+  t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
 /**
  * Structural CSS only. These are the rules that cannot be expressed as utility
@@ -55,11 +58,44 @@ const easeSine = (t: number): number => 0.5 - 0.5 * Math.cos(Math.PI * t);
  * from a build before, and a missing `transform-style` would silently flatten
  * the whole helix into a stack of overlapping rectangles.
  */
+const EASE_OUT = "cubic-bezier(0.22, 1, 0.36, 1)";
+
 const CSS = [
   ".pr-view{position:absolute;inset:0;perspective-origin:50% 50%}",
   ".pr-scene{position:absolute;left:50%;top:50%;width:0;height:0;transform-style:preserve-3d}",
   ".pr-group,.pr-screw{position:absolute;left:0;top:0;width:0;height:0;transform-style:preserve-3d}",
   ".pr-slice{position:absolute;left:0;top:0;transform-origin:0 0;background-repeat:no-repeat;backface-visibility:hidden}",
+  // The grid the ribbon lands into. Cards are placed by the frame loop.
+  ".pr-grid{position:absolute;inset:0;z-index:2;pointer-events:none}",
+  ".pr-card{position:absolute;left:0;top:0;opacity:0;will-change:transform,opacity}",
+  ".pr-frame{position:relative;overflow:hidden;border-radius:10px;background:#10141f}",
+  ".pr-frame img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;display:block}",
+  ".pr-rim{position:absolute;inset:0;border-radius:10px;pointer-events:none;opacity:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.18),inset 0 0 30px rgba(123,97,255,0.16)}",
+  ".pr-cap{display:flex;justify-content:space-between;gap:12px;padding-top:9px;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;line-height:1;color:rgba(255,255,255,0.42)}",
+  ".pr-cap b{font-weight:700;color:rgba(255,255,255,0.72)}",
+  /*
+    Hover, fine pointers only. A touch tap would otherwise latch the hover on
+    and leave a card stuck lit, which is the rule about always attaching the
+    reverse of whatever the enter did.
+
+    Only the image inside the frame scales. The frame's own box never changes,
+    so nothing reflows and no neighbour moves: hover must not touch
+    layout-affecting properties. The base rule is the leave and is quicker than
+    the :hover rule, which is the enter.
+  */
+  "@media (hover:hover) and (pointer:fine){" +
+    `.pr-frame img{transition:transform ${RIBBON.hover.exitMs}ms ${EASE_OUT},filter ${RIBBON.hover.exitMs}ms ${EASE_OUT}}` +
+    `.pr-rim{transition:opacity ${RIBBON.hover.exitMs}ms ${EASE_OUT}}` +
+    `.pr-cap,.pr-cap b{transition:color ${RIBBON.hover.exitMs}ms ${EASE_OUT}}` +
+    `.pr-card:hover .pr-frame img{transition-duration:${RIBBON.hover.enterMs}ms;transform:scale(${RIBBON.hover.scale});filter:brightness(1.06) saturate(1.04)}` +
+    `.pr-card:hover .pr-rim{transition-duration:${RIBBON.hover.enterMs}ms;opacity:1}` +
+    ".pr-card:hover .pr-cap{color:rgba(255,255,255,0.6)}" +
+    ".pr-card:hover .pr-cap b{color:#eef0f7}" +
+    `.pr-card:active .pr-frame img{transform:scale(${RIBBON.hover.pressScale});transition-duration:140ms}` +
+  "}",
+  // Reduced motion keeps the lift but drops the movement, per the rule that
+  // reduced motion means gentler, not nothing.
+  "@media (prefers-reduced-motion:reduce){.pr-frame img{transition:none}.pr-card:hover .pr-frame img{transform:none;filter:brightness(1.06)}}",
 ].join("\n");
 
 export function PortfolioRibbon(): React.ReactElement | null {
@@ -70,6 +106,7 @@ export function PortfolioRibbon(): React.ReactElement | null {
   const viewRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<HTMLDivElement>(null);
   const screwRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   /** 0 when the stage pins, 1 when it lets go. */
   const { scrollYProgress } = useScroll({
@@ -86,12 +123,18 @@ export function PortfolioRibbon(): React.ReactElement | null {
     const view = viewRef.current;
     const group = groupRef.current;
     const screw = screwRef.current;
-    if (!stage || !view || !group || !screw) return;
+    const grid = gridRef.current;
+    if (!stage || !view || !group || !screw || !grid) return;
 
     const slices = Array.from(screw.children) as HTMLDivElement[];
+    const cards = Array.from(grid.children) as HTMLDivElement[];
     const n = work.length;
 
-    const L = { W: 0, H: 0, R: 0, ch: 0, pitch: 0, dTheta: 0, persp: 0 };
+    const L = {
+      W: 0, H: 0, R: 0, ch: 0, pitch: 0, dTheta: 0, persp: 0,
+      cols: 3, tw: 0, th: 0, gridH: 0, top: 0, pad: 0,
+      slot: [] as { x: number; y: number }[],
+    };
 
     /*
       Layout. Run on mount and on resize, never per frame.
@@ -143,15 +186,113 @@ export function PortfolioRibbon(): React.ReactElement | null {
           `skewY(${(-skew).toFixed(3)}deg)` +
           (back ? ` translateX(${px(sw + 2)}) rotateY(180deg)` : "");
       }
+
+      /*
+        Grid. Laid out in the stage's own pixels because the cards are placed
+        by the frame loop rather than by flow: nothing here is a flex or grid
+        container, so the slots are worked out once per resize and the loop
+        only ever writes transforms into them.
+      */
+      const g = RIBBON.grid;
+      const pad = Math.round(Math.min(Math.max(W * 0.022, 18), 56));
+      const cols = W >= g.wideAbovePx ? g.colsWide : W >= g.midAbovePx ? g.colsMid : g.colsNarrow;
+      const gx = Math.round(pad * 0.75);
+      const gy = Math.round(pad * 0.9);
+      L.pad = pad;
+      L.cols = cols;
+      L.tw = (W - 2 * pad - (cols - 1) * gx) / cols;
+      L.th = L.tw / 1.5;
+      const rows = Math.ceil(n / cols);
+      L.gridH = rows * (L.th + g.capRowPx) + (rows - 1) * gy;
+      L.top = pad;
+      L.slot = work.map((_, i) => ({
+        x: pad + (i % cols) * (L.tw + gx),
+        y: Math.floor(i / cols) * (L.th + g.capRowPx + gy),
+      }));
+      for (const c of cards) {
+        const frame = c.firstElementChild as HTMLElement;
+        frame.style.width = px(L.tw);
+        frame.style.height = px(L.th);
+        c.style.width = px(L.tw);
+      }
+
       draw(true);
     };
 
     let cur = 0;
     const shade = new Float32Array(slices.length).fill(-1);
 
+    const pointer = new Int8Array(cards.length).fill(-1);
+
+    /*
+      The landing grid. Each card flies in from the edge nearest its own slot,
+      so none of them crosses a card that has already landed: the first row
+      comes from the left, the top and the right, and later rows from below.
+    */
+    const drawGrid = (force?: boolean): void => {
+      const { W, H } = L;
+      const g = RIBBON.grid;
+      const settle = easeInOut(seg(cur, g.settle[0], g.settle[1]));
+      const avail = H - L.top - L.pad;
+      const landY = H * 0.4;
+      const endY = L.gridH <= avail ? L.top + (avail - L.gridH) / 2 : H - L.pad - L.gridH;
+      const baseY = landY + (endY - landY) * settle;
+
+      for (let i = 0; i < cards.length; i++) {
+        const el = cards[i];
+        const slot = L.slot[i];
+        if (!slot) continue;
+        const a = g.land[0] + i * g.stagger;
+        const t = easeOut(seg(cur, a, a + (g.land[1] - g.land[0])));
+
+        // Only landed cards take the pointer, or an invisible one would catch
+        // a hover and light a card nobody can see.
+        const want = t >= 0.999 ? 1 : 0;
+        if (force || pointer[i] !== want) {
+          pointer[i] = want;
+          el.style.pointerEvents = want ? "auto" : "none";
+        }
+        if (t <= 0) {
+          el.style.opacity = "0";
+          continue;
+        }
+
+        const frame = el.firstElementChild as HTMLElement;
+        const cap = el.lastElementChild as HTMLElement;
+        const k = 1 - t;
+        const grow = 1 + 0.4 * k;
+        const w = L.tw * grow;
+        const h = L.th * grow;
+        const row = Math.floor(i / L.cols);
+        const col = i % L.cols;
+        const sx = slot.x - (w - L.tw) / 2;
+        const sy = baseY + slot.y;
+        let fromX = sx;
+        let fromY = sy;
+        if (row > 0) fromY = H + h * 0.1;
+        else if (col === 0) fromX = -w * 1.05;
+        else if (col === L.cols - 1) fromX = W + w * 0.05;
+        else fromY = -h * 1.05;
+
+        frame.style.width = px(w);
+        frame.style.height = px(h);
+        el.style.width = px(w);
+        el.style.opacity = String(Math.min(1, t * 3));
+        // Blur masks the gap between a card arriving and a card arrived, the
+        // same trick that stops a crossfade reading as two separate objects.
+        frame.style.filter = k > 0.01 ? `blur(${(k * 7).toFixed(2)}px)` : "";
+        el.style.transform =
+          `translate(${px(sx + (fromX - sx) * k)},${px(sy + (fromY - sy) * k)}) ` +
+          `perspective(${px(L.persp)}) rotateX(${(k * 16).toFixed(2)}deg)`;
+        cap.style.opacity = String(seg(t, 0.8, 1));
+      }
+    };
+
     const draw = (force?: boolean): void => {
       const { W, H } = L;
       if (!W) return;
+
+      drawGrid(force);
 
       const t = seg(cur, RIBBON.phase[0], RIBBON.phase[1]);
       if (t <= 0 || t >= 1) {
@@ -305,6 +446,40 @@ export function PortfolioRibbon(): React.ReactElement | null {
               </div>
             </div>
           </div>
+        </div>
+
+        {/*
+          Where the ribbon lands. Unlike the ribbon this is real content, not
+          motion, so it keeps its images and its alt text: by the end of the
+          scroll this grid is the only thing on the stage.
+
+          TODO Malik: wrap each card in a Link once the case study pages exist.
+          They are deliberately not clickable yet, and the hover is kept to a
+          lift rather than a pointer cursor so it does not promise a page that
+          would 404.
+        */}
+        <div ref={gridRef} className="pr-grid">
+          {work.map((item, i) => (
+            <div key={item.src} className="pr-card">
+              <div className="pr-frame">
+                <Image
+                  src={item.src}
+                  alt={item.alt}
+                  width={900}
+                  height={600}
+                  sizes="(max-width: 720px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                  draggable={false}
+                />
+                <span className="pr-rim" aria-hidden />
+              </div>
+              <div className="pr-cap">
+                <b>{item.title}</b>
+                <span aria-hidden>
+                  {i + 1}/{work.length}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>

@@ -15,8 +15,8 @@ export default function PortfolioPage() {
   return (
     <main className="bg-[#030712]">
       <PortfolioHero />
-      <WorkList hideHeading />
       <PortfolioRibbon />
+      <WorkList hideHeading />
       <FolioShowcase />
       <ClientWall />
       <SiteFooter />
