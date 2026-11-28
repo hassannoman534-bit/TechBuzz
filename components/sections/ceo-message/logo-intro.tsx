@@ -9,82 +9,73 @@ import { GlassIconReveal } from "@/components/ui/liquid-glass-logo-reveal";
 import { ceoMessage, EASE } from "./ceo-message.config";
 import { LOGO_REVEAL } from "./logo-reveal.config";
 
-type LogoIntroProps = { onDone: () => void };
+type LogoIntroProps = {
+  /** Mount the hero's own WebGL behind the still-opaque plate. */
+  onPrewarm: () => void;
+  /** Start the plate leaving. */
+  onDone: () => void;
+};
 
 const { intro } = ceoMessage;
+const F = LOGO_REVEAL.field;
 
 /**
- * Phase 1. The logo alone on the void, no plate and no container.
+ * Phase 1. The mark revealed in glass, on a frosted field, handing over to the
+ * page.
  *
- * The mark arrives as a liquid glass reveal: a droplet grows and lands, spreads
- * into a glass tile that holds the mark while a band of light crosses it, then
- * the glass lets go and leaves the mark. See logo-reveal.config.ts for the
- * timing and for the one thing that limits how good it looks, which is that the
- * only TechBuzz logo in the repo is a wide wordmark and the tile is square.
+ * ── Why this is on a light field ────────────────────────────────────────────
  *
- * Blur still carries the exit, so the swap between the overlay and the page
- * reads as one movement rather than two layers crossfading. Nothing animates
- * from scale 0.
+ * It ran on the page void first, and the glass was invisible. That was not a
+ * tuning problem. Refraction only shows you what is behind it, and behind it
+ * was rgb(3,7,18): the glass had nothing to bend, nothing to disperse and
+ * nothing to catch, so the only part of the effect with any luminance was the
+ * rim light, and the only thing anyone saw was an outline. Hence a logo that
+ * appeared to be sitting in a box, and hence a box that survived every attempt
+ * to tune it away, because the box WAS the effect.
  *
- * ── Three things keep this from costing the intro anything ──────────────────
+ * On a light field the same shader has something to work with. The corners
+ * bend the mark and split it into colour, the bevel catches, the rim stops
+ * being the brightest thing on screen, and the tile reads as a piece of glass
+ * laid over a surface. Nothing about the optics changed; the thing behind them
+ * did.
  *
- * 1. The distance field the shader needs is built in time slices, so no single
- *    task blocks a frame. That build is the only expensive part of this effect
- *    and it used to be one synchronous ~100ms pass, which would have landed
- *    directly on top of LiquidText initialising the hero's own WebGL2 context.
- * 2. The hold starts when the reveal is ready rather than on mount, so a slow
- *    machine gets the whole reveal instead of the overlay leaving halfway
- *    through it. `maxHoldMs` is the ceiling that makes waiting safe.
- * 3. Reduced motion never mounts the canvas at all. It gets the still logo, the
- *    same fallback the rest of this page uses, and builds no field for it.
+ * ── Why the canvas covers everything ────────────────────────────────────────
  *
- * The context this mounts is also transient: the overlay unmounts through
- * AnimatePresence, so the reveal's canvas is disposed before the page's own
- * surfaces matter. It does not add to the count this page was trimmed down to.
+ * It used to be a square box in the middle of the overlay, which meant the
+ * canvas's flat fill had an edge, and any texture on the page either stopped
+ * at that edge or crossed it. Full screen, there is no edge to line anything
+ * up with: the frosted texture simply lies over the whole plate, canvas
+ * included, and the two cannot come apart. The expensive branch of the shader
+ * still only runs inside the tile, so what this costs is the cheap path over
+ * more pixels, on a canvas that lives for two and a half seconds.
  *
- * Scroll is locked for the hold on `document.body`, never on <html>: <html> is
- * h-full here, and overflow:hidden there turns it into its own scroll container,
- * which breaks every sticky section on the site.
+ * ── Why the exit is staged ──────────────────────────────────────────────────
+ *
+ * See LOGO_REVEAL.prewarmMs. The old handover stuttered because the fade and
+ * the hero's WebGL setup landed on the same frames. The work now happens
+ * behind an opaque plate, and only then does anything move.
  */
-export function LogoIntro({ onDone }: LogoIntroProps): React.ReactElement {
+export function LogoIntro({ onPrewarm, onDone }: LogoIntroProps): React.ReactElement {
   const reduce = useReducedMotionSafe();
   const lenis = useLenis();
 
   const glass = LOGO_REVEAL.enabled && !reduce;
-  /*
-    The reveal's WebGL context is given up the moment the hold ends, rather than
-    when the overlay finishes fading out.
-
-    This page runs close to the browser's budget for live contexts: the navbar,
-    the hero word, the sign off surface and the letter sheet are all WebGL, and
-    the reveal is a fifth. Past the budget the browser takes one away without
-    warning, and a canvas whose context has been taken renders as the broken
-    image placeholder, which is the white box with a torn page icon that showed
-    up where the hero word should be.
-
-    By the time the hold is over the reveal has already finished and is showing
-    the bare mark, and the still logo below is the same mark at the same size,
-    so dropping the canvas here is invisible and hands the slot back half a
-    second before the hero word asks for one.
-  */
   const [released, setReleased] = useState(false);
   const [ready, setReady] = useState(false);
   const [patienceGone, setPatienceGone] = useState(false);
   const handleReady = useCallback(() => setReady(true), []);
-  const finish = useCallback(() => {
-    setReleased(true);
-    onDone();
-  }, [onDone]);
 
   /*
-    The hold. Two timers, and whichever fires first wins, because onDone only
-    ever flips one boolean.
-
-    The first is the real one and does not start until the reveal can play. The
-    second is the ceiling: if the field never arrives, or arrives very late on a
-    throttled machine, the intro still hands over on time rather than holding
-    the page on a blank overlay.
+    Hand over in two steps. First the reveal's canvas is dropped and the hero
+    is told to build itself, both while the plate is still opaque and hiding
+    everything. Only after prewarmMs does the plate begin to leave.
   */
+  const finish = useCallback(() => {
+    setReleased(true);
+    onPrewarm();
+    window.setTimeout(onDone, LOGO_REVEAL.prewarmMs);
+  }, [onDone, onPrewarm]);
+
   useEffect(() => {
     if (!glass) {
       const id = window.setTimeout(finish, reduce ? intro.reducedHoldMs : intro.holdMs);
@@ -100,7 +91,6 @@ export function LogoIntro({ onDone }: LogoIntroProps): React.ReactElement {
     return () => window.clearTimeout(id);
   }, [finish, glass, ready]);
 
-  /** If the reveal is slow to arrive, show the still logo rather than nothing. */
   useEffect(() => {
     if (!glass) return;
     const id = window.setTimeout(() => setPatienceGone(true), LOGO_REVEAL.patienceMs);
@@ -118,149 +108,156 @@ export function LogoIntro({ onDone }: LogoIntroProps): React.ReactElement {
     return () => {
       body.style.overflow = previous;
       lenis?.start();
-      // The page was measured while the body was locked, so the scroll driven
-      // stage below needs a fresh measurement before it is scrolled.
+      // Measured while the body was locked, so the scroll driven stages below
+      // need a fresh measurement before anything scrolls them.
       lenis?.resize();
       window.dispatchEvent(new Event("resize"));
     };
   }, [lenis]);
 
-  /*
-    The still logo covers three cases: reduced motion, no WebGL2, and a machine
-    too slow to have built the field yet. It also takes back over the moment the
-    canvas is released, where it is showing exactly what the reveal ended on.
-  */
   const stillVisible = !glass || released || (patienceGone && !ready);
+  const exit = LOGO_REVEAL.exitMs / 1000;
 
   return (
     <motion.div
       key="ceo-logo-intro"
       role="presentation"
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-[#030712]"
+      className="fixed inset-0 z-[70] overflow-hidden"
       initial={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: reduce ? 0.3 : 0.55, ease: EASE }}
+      /*
+        The plate lifts and softens rather than simply switching off. Scale and
+        blur carry the movement; opacity only finishes it, late, so the page is
+        already visible underneath by the time the plate is gone.
+      */
+      exit={
+        reduce
+          ? { opacity: 0 }
+          : { opacity: 0, scale: 1.05, filter: "blur(14px)" }
+      }
+      transition={{
+        duration: reduce ? 0.3 : exit,
+        ease: EASE,
+        opacity: { duration: reduce ? 0.3 : exit * 0.55, delay: reduce ? 0 : exit * 0.45, ease: "linear" },
+      }}
+      style={{ backgroundColor: LOGO_REVEAL.background }}
     >
-      {/* Ambient bloom. Opacity and scale only, no filter on a full screen layer. */}
+      {/*
+        The field under the glass. It crossfades to the page void as the plate
+        leaves, so the journey from a light intro to a dark site happens inside
+        one movement instead of as a cut between two.
+      */}
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[40rem] w-[40rem] -translate-x-1/2 -translate-y-1/2 rounded-full"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(123,97,255,0.22) 0%, rgba(91,124,255,0.09) 45%, rgba(3,7,18,0) 70%)",
-        }}
-        initial={{ opacity: 0, scale: reduce ? 1 : 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: reduce ? 0.3 : 1.5, ease: EASE }}
-      />
-
-      <motion.div
-        className="relative"
-        initial={
-          reduce
-            ? { opacity: 0 }
-            : { opacity: 0, scale: 1.06, filter: "blur(14px)" }
-        }
-        animate={
-          reduce
-            ? { opacity: 1 }
-            : { opacity: 1, scale: 1, filter: "blur(0px)" }
-        }
-        exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 1.04, filter: "blur(10px)" }}
-        transition={{ duration: reduce ? 0.3 : 1.2, ease: EASE }}
+        className="absolute inset-0"
+        style={{ backgroundColor: LOGO_REVEAL.background }}
+        exit={reduce ? {} : { backgroundColor: "#030712" }}
+        transition={{ duration: reduce ? 0.3 : exit * 0.6, ease: EASE }}
       >
-        {/*
-          Both layers share one square box so neither can shift the other. The
-          box is sized off the tile, not off a viewport clamp: the engine fits
-          the tile into the smaller side divided by 1.75, and that margin is
-          what the halo and the lift shadow are drawn into.
-        */}
+        {/* Two wide blooms, far behind the tile, giving the frost its colour. */}
         <div
-          className="relative grid place-items-center"
+          className="absolute inset-0"
           style={{
-            width: `min(82vw, ${LOGO_REVEAL.tileSize * 1.75}px)`,
-            height: `min(82vw, ${LOGO_REVEAL.tileSize * 1.75}px)`,
+            backgroundImage: [
+              `radial-gradient(60% 55% at 18% 22%, ${F.bloomA}, rgba(0,0,0,0) 70%)`,
+              `radial-gradient(55% 50% at 84% 78%, ${F.bloomB}, rgba(0,0,0,0) 72%)`,
+              `radial-gradient(42% 40% at 72% 16%, ${F.bloomC}, rgba(0,0,0,0) 70%)`,
+            ].join(","),
+            filter: "blur(36px)",
           }}
-        >
-          {glass && !released && (
-            <motion.div
-              className="absolute inset-0"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: ready ? 1 : 0 }}
-              transition={{ duration: 0.4, ease: EASE }}
-            >
-              <GlassIconReveal
-                logo={LOGO_REVEAL.logoSrc}
-                label={intro.logoAlt}
-                look="dark"
-                className="h-full w-full"
-                background={LOGO_REVEAL.background}
-                logoColor={LOGO_REVEAL.logoColor}
-                /*
-                  No plate: the glass sits on the void and lets go of the mark,
-                  rather than settling into an app icon. The upstream dark preset
-                  turns the plate on, which is the one thing about it that does
-                  not suit a page whose whole opening is the logo alone.
-                */
-                iconPlate={false}
-                keepPlate={false}
-                tileSize={LOGO_REVEAL.tileSize}
-                logoScale={LOGO_REVEAL.logoScale}
-                finalScale={LOGO_REVEAL.finalScale}
-                texSize={LOGO_REVEAL.texSize}
-                spectralSamples={LOGO_REVEAL.spectralSamples}
-                dprMax={LOGO_REVEAL.dprMax}
-                tuning={{
-                  present: LOGO_REVEAL.present,
-                  glide: LOGO_REVEAL.glide,
-                  startZoom: LOGO_REVEAL.startZoom,
-                  halo: LOGO_REVEAL.halo,
-                  shadow: LOGO_REVEAL.shadow,
-                  bevelWidth: LOGO_REVEAL.bevelWidth,
-                  specular: LOGO_REVEAL.specular,
-                  ripple: LOGO_REVEAL.ripple,
-                  edgeMelt: LOGO_REVEAL.edgeMelt,
-                }}
-                onReady={handleReady}
-                replayOnClick
-              />
-            </motion.div>
-          )}
-
-          {/*
-            The still logo. It is the reduced motion path, the no-WebGL2 path and
-            the slow-machine path, so it stays mounted and is only faded out once
-            there is a reveal to hand over to.
-          */}
-          <motion.div
-            className="absolute inset-0 grid place-items-center"
-            initial={{ opacity: glass ? 0 : 1 }}
-            animate={{ opacity: stillVisible ? 1 : 0 }}
-            transition={{ duration: 0.4, ease: EASE }}
-            style={{ pointerEvents: "none" }}
-          >
-            <Image
-              src={intro.logoSrc}
-              alt={glass ? "" : intro.logoAlt}
-              aria-hidden={glass ? true : undefined}
-              width={intro.logoWidth}
-              height={intro.logoHeight}
-              priority
-              sizes="(max-width: 640px) 64vw, 26rem"
-              className="h-auto select-none"
-              style={{
-                // On the glass path this has to be exactly what the reveal ends
-                // on, or the handover pops. The revealed mark is logoScale by
-                // finalScale of the tile; off that path the original clamp.
-                width: glass
-                  ? `min(82vw, ${LOGO_REVEAL.tileSize * LOGO_REVEAL.logoScale * LOGO_REVEAL.finalScale}px)`
-                  : "clamp(12rem, 42vw, 22rem)",
-              }}
-            />
-          </motion.div>
-        </div>
+        />
+        <div className="absolute inset-0" style={{ background: F.vignette }} />
       </motion.div>
+
+      {/*
+        The reveal, covering the whole plate. Below the blooms in the stacking
+        order would hide them; above the grain would wash it out. Here it sits
+        between the two, which is also what makes the grain read as a surface
+        the glass is under rather than a texture printed on top of the page.
+      */}
+      {glass && !released && (
+        <motion.div
+          className="absolute inset-0"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: ready ? 1 : 0 }}
+          transition={{ duration: 0.45, ease: EASE }}
+        >
+          <GlassIconReveal
+            logo={LOGO_REVEAL.logoSrc}
+            label={intro.logoAlt}
+            look={LOGO_REVEAL.look}
+            className="h-full w-full"
+            background={LOGO_REVEAL.background}
+            logoColor={LOGO_REVEAL.logoColor}
+            iconPlate={false}
+            keepPlate={false}
+            tileSize={LOGO_REVEAL.tileSize}
+            logoScale={LOGO_REVEAL.logoScale}
+            finalScale={LOGO_REVEAL.finalScale}
+            texSize={LOGO_REVEAL.texSize}
+            spectralSamples={LOGO_REVEAL.spectralSamples}
+            dprMax={LOGO_REVEAL.dprMax}
+            tuning={{
+              present: LOGO_REVEAL.present,
+              glide: LOGO_REVEAL.glide,
+              startZoom: LOGO_REVEAL.startZoom,
+              halo: LOGO_REVEAL.halo,
+              shadow: LOGO_REVEAL.shadow,
+              bevelWidth: LOGO_REVEAL.bevelWidth,
+              specular: LOGO_REVEAL.specular,
+              ripple: LOGO_REVEAL.ripple,
+              edgeMelt: LOGO_REVEAL.edgeMelt,
+            }}
+            onReady={handleReady}
+            replayOnClick
+          />
+        </motion.div>
+      )}
+
+      {/*
+        The still mark. Reduced motion, no WebGL2, a machine too slow to have
+        built the field yet, and the moment the canvas is released. Inked
+        rather than white, because white does not exist on this field.
+      */}
+      <motion.div
+        className="pointer-events-none absolute inset-0 grid place-items-center"
+        initial={{ opacity: glass ? 0 : 1 }}
+        animate={{ opacity: stillVisible ? 1 : 0 }}
+        transition={{ duration: 0.4, ease: EASE }}
+      >
+        <Image
+          src={LOGO_REVEAL.stillSrc}
+          alt={glass ? "" : intro.logoAlt}
+          aria-hidden={glass ? true : undefined}
+          width={intro.logoWidth}
+          height={intro.logoHeight}
+          priority
+          sizes="(max-width: 640px) 64vw, 26rem"
+          className="h-auto select-none"
+          style={{
+            // Exactly what the reveal ends on, or the handover pops.
+            width: glass
+              ? `min(82vw, ${LOGO_REVEAL.tileSize * LOGO_REVEAL.logoScale * LOGO_REVEAL.finalScale}px)`
+              : "clamp(12rem, 42vw, 22rem)",
+          }}
+        />
+      </motion.div>
+
+      {/*
+        Grain, over everything including the canvas. This is what sells the
+        frost, and it is also why no canvas edge can be found: the same texture
+        lies across the glass and the field at the same strength.
+      */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage: `url(${F.grainSrc})`,
+          backgroundSize: `${F.grainTilePx}px ${F.grainTilePx}px`,
+          backgroundRepeat: "repeat",
+          opacity: F.grainOpacity,
+          mixBlendMode: "overlay",
+        }}
+      />
     </motion.div>
   );
 }

@@ -39,9 +39,59 @@ export const LOGO_REVEAL = {
    * `originalColors` stays off and the shader never samples the colour texture.
    */
   logoSrc: "/assets/brand/techbuzz-logo-white.png",
-  logoColor: "#ffffff",
-  /** The page void. The canvas paints this, so a mismatch would show as a box. */
-  background: "#030712",
+  /**
+   * The still logo the reveal hands over to, and the colour the glass draws
+   * the mark in.
+   *
+   * The reveal only ever reads the source's alpha, so the white PNG is still
+   * the right input: it is the shape that matters. The still fallback cannot
+   * use it on a light field, where white is invisible, so it gets an inked
+   * copy of the same artwork.
+   */
+  stillSrc: "/assets/brand/techbuzz-logo-ink.png",
+  logoColor: "#0e1428",
+  /**
+   * The field the reveal happens on, and the single change that fixes the box.
+   *
+   * This ran on the page void before, which is what the dark preset is for,
+   * and it was wrong in a way no amount of tuning was going to repair. On a
+   * page at rgb(3,7,18) the glass has nothing to refract and nothing to catch:
+   * the only thing with any luminance is the rim light, so the one part of the
+   * effect that read at all was its outline, which is precisely why it looked
+   * like a logo sitting in a box.
+   *
+   * On a light field the same shader has something to bend. The rim stops
+   * being the brightest thing on screen, the dispersion in the corners becomes
+   * visible, and the tile reads as glass rather than as an edge. This is the
+   * preset the component was built for and the one the reference shows.
+   *
+   * The canvas paints this flat and covers the whole screen, so the frosted
+   * texture below goes over the top of it rather than around it. Nothing is
+   * masked, nothing has to line up, and no rectangle can exist.
+   */
+  look: "light" as const,
+  background: "#edeef2",
+
+  /**
+   * The frosted field: what makes it read as glass rather than as grey.
+   *
+   * Two wide colour blooms well behind the tile, and a fine grain over
+   * everything including the canvas. The grain is the important half. It is
+   * what a frosted surface actually looks like up close, and because it is
+   * laid over the canvas as well as the page it also guarantees the two read
+   * as one surface.
+   */
+  field: {
+    bloomA: "rgba(123,97,255,0.30)",
+    bloomB: "rgba(91,124,255,0.26)",
+    bloomC: "rgba(44,245,176,0.14)",
+    /** Grain tile and how much of it shows. Past about 0.06 it reads as dirt. */
+    grainSrc: "/assets/brand/grain.png",
+    grainOpacity: 0.045,
+    grainTilePx: 128,
+    /** Pulls the eye to the middle and stops the blooms touching the edges. */
+    vignette: "radial-gradient(118% 100% at 50% 45%, rgba(0,0,0,0) 52%, rgba(14,20,40,0.10) 100%)",
+  },
 
   /**
    * Tile size in px, and the logo's share of it.
@@ -84,33 +134,47 @@ export const LOGO_REVEAL = {
     exactly as before, which is the part worth keeping. Raise `halo` back toward
     1 if it now reads as too flat.
   */
+  /*
+    These now follow the light preset rather than fighting it.
+
+    On the void every one of them had to be turned down or off, because each
+    was drawing an outline. On a light field they are the effect: the lift
+    shadow gives the tile a place to sit, and the specular is what catches
+    along the bevel. The one thing still overridden is the melt, and only
+    gently, because the light path has no blazing rim to hide.
+  */
   halo: 0,
-  shadow: 0,
+  shadow: 1,
   bevelWidth: 0.14,
-  specular: 0.55,
+  specular: 1,
   /** The landing ring. Kept faint: it is the one other thing drawn on the void. */
-  ripple: 0.25,
+  ripple: 1,
 
   /**
    * How far the tile's own shading fades out at its rim, in plate units.
    *
-   * This is the one that actually removes the container. Dropping the halo took
-   * away the glow outside the rim and the box survived it, because the box was
-   * never outside the rim: it is the rim light itself, which measures +64/255
-   * at the edge against a page at rgb(3,7,18). The melt takes that to +1/255.
+   * Zero on the light field, and that is deliberate rather than an oversight.
    *
-   * At 0.3 the shading is gone over the outer third of the tile's half width
-   * while the refraction carries on to the very edge, so the mark is still bent
-   * and split into colour and the glass itself has no boundary to find. Set it
-   * to 0 for the upstream hard edged pane.
+   * This existed to kill the rim light on the void, where it measured +64/255
+   * against a page at rgb(3,7,18): a band twenty times brighter than its
+   * surroundings, drawn around the tile, which is what the box was. On the
+   * light field the identical rim measures +15/255 against a field at 237, a
+   * lift of about six per cent. It is not an outline any more, it is the
+   * hairline along the edge of a piece of glass, and it is a large part of why
+   * the reference reads as glass at all.
+   *
+   * Measured before changing it: at 0.16 the hairline came out at +0/255, so
+   * the melt was erasing the very thing that was wanted here. Raise it only if
+   * the edge ever looks hard; the glow and the inner lip survive it, the
+   * hairline does not.
    */
-  edgeMelt: 0.3,
+  edgeMelt: 0,
   /**
    * How far the droplet magnifies the mark before it glides out. The upstream
    * dark preset uses 1.6; a wordmark's thin strokes smear at that, so this is
    * deliberately lower. Raise it if the mark ever becomes square.
    */
-  startZoom: 1.45,
+  startZoom: 1.9,
 
   /**
    * Cost levers. See the component's header for what each one buys.
@@ -127,7 +191,7 @@ export const LOGO_REVEAL = {
    */
   texSize: 1024,
   spectralSamples: 12,
-  dprMax: 1.75,
+  dprMax: 1.5,
 
   /**
    * Intro timing, ms.
@@ -138,7 +202,34 @@ export const LOGO_REVEAL = {
    * field build, the page is never held longer than this.
    */
   holdMs: 2500,
-  maxHoldMs: 3600,
+  maxHoldMs: 4200,
+
+  /**
+   * The handover, which is the other half of what was wrong.
+   *
+   * The overlay used to start fading at the same instant the hero word was
+   * mounted, so the fade and the building of a WebGL context, the compiling of
+   * its shaders and the rasterising of the word all happened on the same
+   * frames. That is the stutter: the exit was not slow, it was starved.
+   *
+   * Now the word is mounted `prewarmMs` before the overlay moves, while the
+   * plate is still fully opaque and hiding it. By the time anything animates,
+   * the expensive work is done and the main thread has nothing else to do.
+   * The reveal's own canvas is released at the same moment, so the two are
+   * never alive together.
+   */
+  prewarmMs: 420,
+
+  /**
+   * How long the plate takes to leave, ms.
+   *
+   * 550 before, which read as a cut. The plate now lifts and softens on its
+   * way out instead of simply vanishing, and that only works with time to do
+   * it in. The light field is also crossfaded to the page void before the
+   * plate goes, so the eye is taken from light to dark in one movement rather
+   * than being dropped into it.
+   */
+  exitMs: 1150,
   /** How long to wait for the reveal before falling back to the static logo. */
   patienceMs: 900,
 } as const;

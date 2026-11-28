@@ -55,6 +55,15 @@ export function CeoMessage(): React.ReactElement {
   const reduce = useReducedMotionSafe();
   const heroRef = useRef<HTMLElement>(null);
   const [introDone, setIntroDone] = useState(false);
+  /*
+    Set a beat before introDone, while the intro plate is still opaque.
+
+    The hero word's WebGL context, its shader compile and its rasterisation all
+    happen here, hidden, so that none of it lands on the frames the plate is
+    using to leave. That overlap is what made the handover stutter.
+  */
+  const [heroReady, setHeroReady] = useState(false);
+  const handlePrewarm = useCallback(() => setHeroReady(true), []);
   const handleIntroDone = useCallback(() => setIntroDone(true), []);
   const family = useResolvedFont(LIQUID.fontVar);
   const narrow = useNarrowScreen(LIQUID.liveAbovePx);
@@ -148,7 +157,9 @@ export function CeoMessage(): React.ReactElement {
   return (
     <>
       <AnimatePresence>
-        {!introDone && <LogoIntro key="intro" onDone={handleIntroDone} />}
+        {!introDone && (
+          <LogoIntro key="intro" onPrewarm={handlePrewarm} onDone={handleIntroDone} />
+        )}
       </AnimatePresence>
 
       <section
@@ -220,8 +231,10 @@ export function CeoMessage(): React.ReactElement {
               one, on a page that already runs three. Past the browser's budget
               one gets taken away without warning, and the loser rendered as the
               broken image placeholder. Nothing is lost by waiting: the hero is
-              behind a full screen overlay until introDone, and the span below
-              already stands in until the canvas lands.
+              behind a full screen overlay until it has gone, and the span
+              below already stands in until the canvas lands. It is gated on
+              heroReady rather than introDone so the build happens while the
+              plate is still covering it, not while the plate is leaving.
 
               Height is reserved. LiquidText sizes itself from the rasterised
               word, which only exists after mount, and this column is centred
@@ -245,7 +258,7 @@ export function CeoMessage(): React.ReactElement {
               }}
               {...fade(0.12)}
             >
-              {family && introDone ? (
+              {family && heroReady ? (
                 <LiquidText
                   text={heading.word}
                   ariaLabel={heading.srHeading}
