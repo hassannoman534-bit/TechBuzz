@@ -8,6 +8,7 @@ export type WorkListItem = {
   title: string;
   /** Short services line shown next to the title, e.g. "Branding & Social" */
   services: string;
+  /** Empty string when there is no case study page yet: the row renders unlinked. */
   href: string;
   /** Tint used for the placeholder cards until real images are added (any CSS colour) */
   color: string;
@@ -33,10 +34,13 @@ export const workList: WorkListContent = {
   heading: "Featured Work",
   label: "Recent work",
   items: [
+    // href "" means the case study has no page yet, so the row renders without a link rather than
+    // sending anyone to an empty URL. Restore the href as each study is turned on in
+    // components/sections/case-study/case-studies.config.ts — the two lists have to agree.
     { title: "Sultan Yakhni Pulao", services: "Branding & Social", href: "/portfolio/sultan-yakhni-pulao", color: "#2a1d0d" },
-    { title: "FoodBuzz", services: "Design & Development", href: "/portfolio/foodbuzz", color: "#1b1640" },
-    { title: "SHAFAQ Surgical", services: "Branding & Print", href: "/portfolio/shafaq-surgical", color: "#0c2430" },
-    { title: "Qissah", services: "Menu Design & Content", href: "/portfolio/qissah", color: "#0d2a22" },
+    { title: "FoodBuzz", services: "Design & Development", href: "", color: "#1b1640" },
+    { title: "SHAFAQ Surgical", services: "Branding & Print", href: "", color: "#0c2430" },
+    { title: "Qissah", services: "Menu Design & Content", href: "", color: "#0d2a22" },
   ],
   // On the home page, add: more: { label: "More work", href: "/portfolio" },
 };

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState, type PointerEvent } from "react";
+import { useEffect, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { motion, useMotionValue, useScroll, useSpring, useVelocity } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -68,6 +68,30 @@ function MiniStack({ item }: { item: WorkListItem }) {
  * follow the hovered row, its images slide to that project, and scrolling fans the back cards
  * apart before they settle. Every motion is slow and eased; transform and opacity only.
  */
+type RowShellProps = {
+  /** Empty when that case study has no page yet: the row then renders as a plain block. */
+  href: string;
+  onPointerEnter: (e: PointerEvent<HTMLElement>) => void;
+  onFocus: () => void;
+  style: CSSProperties;
+  className: string;
+  children: ReactNode;
+};
+
+/**
+ * A work row links only when there is somewhere to land. An item whose case study is not built
+ * yet keeps its hover stack and its place in the list but is not a link, because the alternative
+ * is a crawlable URL that renders an empty page.
+ */
+function RowShell({ href, onFocus, children, ...rest }: RowShellProps) {
+  if (!href) return <div {...rest}>{children}</div>;
+  return (
+    <Link href={href} onFocus={onFocus} {...rest}>
+      {children}
+    </Link>
+  );
+}
+
 export function WorkList({ content = workList, className, hideHeading = false }: WorkListProps) {
   const reduce = useReducedMotionSafe();
   const fine = useFinePointer();
@@ -83,7 +107,7 @@ export function WorkList({ content = workList, className, hideHeading = false }:
 
   const rowCenter = (el: HTMLElement): number => el.offsetTop + el.offsetHeight / 2;
 
-  const onRowEnter = (i: number, e: PointerEvent<HTMLAnchorElement>): void => {
+  const onRowEnter = (i: number, e: PointerEvent<HTMLElement>): void => {
     if (!hoverMode) return;
     const li = e.currentTarget.parentElement as HTMLElement;
     // First entry: place the stack at the row immediately, then let it glide from there.
@@ -146,7 +170,7 @@ export function WorkList({ content = workList, className, hideHeading = false }:
               viewport={{ once: true, margin: "0px 0px -8% 0px" }}
               transition={{ duration: 1.1, ease: EASE, delay: (hideHeading ? 0.75 : 0) + i * 0.1 }}
             >
-              <Link
+              <RowShell
                 href={item.href}
                 onPointerEnter={(e) => onRowEnter(i, e)}
                 onFocus={() => setIndex(i)}
@@ -200,7 +224,7 @@ export function WorkList({ content = workList, className, hideHeading = false }:
                 </span>
 
                 {!hoverMode && <MiniStack item={item} />}
-              </Link>
+              </RowShell>
             </motion.li>
           );
         })}
